@@ -1,0 +1,3376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animal Language Learning</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        .bg-pattern {
+            background-color: #f0f7ff;
+            background-image: url("data:image/svg+xml,%3Csvg width='52' height='26' viewBox='0 0 52 26' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239bc6fc' fill-opacity='0.1'%3E%3Cpath d='M10 10c0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6h2c0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4v2c-3.314 0-6-2.686-6-6 0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6zm25.464-1.95l8.486 8.486-1.414 1.414-8.486-8.486 1.414-1.414z' /%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .animal-card {
+            transition: all 0.3s ease;
+            transform-origin: center;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+
+        .animal-card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .feedback-correct {
+            animation: bounce 0.5s;
+        }
+
+        .feedback-incorrect {
+            animation: shake 0.5s;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .loading-indicator {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .loading-indicator.active {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .voice-control-panel {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        .control-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #e2e8f0;
+            outline: none;
+        }
+
+        .control-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4f46e5;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .control-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-20px);
+            backdrop-filter: blur(5px);
+        }
+
+        .notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .custom-select {
+            background-image: url("data:image/svg+xml,...");
+            background-position: right 10px center;
+            background-repeat: no-repeat;
+            padding-right: 30px;
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-pattern min-h-screen">
+    <div id="loading-indicator" class="loading-indicator">
+        <svg class="animate-spin h-6 w-6 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span class="text-indigo-600 font-medium">Generating natural speech...</span>
+    </div>
+
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-indigo-800 mb-4">
+                <span class="inline-block transform hover:scale-110 transition-transform duration-200"></span>
+                Aprendiendo inglés
+                <span class="inline-block transform hover:scale-110 transition-transform duration-200"></span>
+            </h1>
+            <p class="text-gray-600">Master English with your phrase!</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Panel de Práctica -->
+            <div class="bg-white rounded-2xl shadow-xl p-6 animal-card">
+                <h2 class="text-2xl font-bold text-indigo-800 mb-6 flex items-center gap-2">
+                    <span class="text-2xl">🐼</span> Practice Panel
+                </h2>
+                
+                <div class="voice-control-panel">
+                    <h3 class="font-bold text-gray-700 mb-4">Voice Settings 🎤</h3>
+                    
+                    <!-- Control de Voz -->
+                    <div class="mb-6">
+                        <label class="block text-gray-700 mb-2">Select Voice Type 🗣️</label>
+                        <select id="voice-select" class="w-full rounded-lg border-2 border-indigo-200 p-2 custom-select">
+                            <option value="us-female-neural">US Female (Neural) 🎯</option>
+                            <option value="us-male-neural">US Male (Neural) 🎯</option>
+                            <option value="uk-female-neural">UK Female (Neural) 🎯</option>
+                            <option value="uk-male-neural">UK Male (Neural) 🎯</option>
+                        </select>
+                    </div>
+
+                    <!-- Control de Velocidad -->
+                    <div class="mb-6">
+                        <label class="block text-gray-700 mb-2">Speaking Speed 🐢 → 🐰</label>
+                        <div class="flex items-center gap-4">
+                            <span class="text-sm text-gray-500">Slow</span>
+                            <input type="range" id="speed-control" 
+                                   class="control-slider flex-grow"
+                                   min="0.5" max="2" step="0.1" value="1">
+                            <span class="text-sm text-gray-500">Fast</span>
+                        </div>
+                    </div>
+
+                    <!-- Control de Claridad -->
+                    <div class="mb-6">
+                        <label class="block text-gray-700 mb-2">Voice Clarity 🔊</label>
+                        <div class="flex items-center gap-4">
+                            <span class="text-sm text-gray-500">Natural</span>
+                            <input type="range" id="clarity-control" 
+                                   class="control-slider flex-grow"
+                                   min="0" max="1" step="0.1" value="0.75">
+                            <span class="text-sm text-gray-500">Clear</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selector de Frase -->
+                <div class="mb-6">
+                    <label class="block text-gray-700 mb-2">Select Phrase 📝</label>
+                    <select id="phrase-select" class="w-full rounded-lg border-2 border-indigo-200 p-2 custom-select">
+                        <option value="">Choose a phrase...</option>
+                        <option value="1">Hello, how are you?</option>
+                        <option value="2">Good morning</option>
+                        <option value="3">Have a nice day</option>
+                        <option value="4">Thank you very much</option>
+                        <option value="5">Please sit down</option>
+                        <option value="6">Can you help me?</option>
+                        <option value="7">What time is it?</option>
+                        <option value="8">Where is the bathroom?</option>
+                        <option value="9">I don't understand</option>
+                        <option value="10">Could you repeat that?</option>
+                        <option value="11">I'm sorry</option>
+                        <option value="12">Excuse me</option>
+                        <option value="13">How much does it cost?</option>
+                        <option value="14">I'm lost</option>
+                        <option value="15">Can you speak slower?</option>
+                        <option value="16">Where are you from?</option>
+                        <option value="17">What is your name?</option>
+                        <option value="18">How old are you?</option>
+                        <option value="19">What do you do?</option>
+                        <option value="20">I like your shirt</option>
+                        <option value="21">I need help</option>
+                        <option value="22">Where do you live?</option>
+                        <option value="23">Can I have a coffee?</option>
+                        <option value="24">Do you have pets?</option>
+                        <option value="25">What is your favorite color?</option>
+                        <option value="26">How was your day?</option>
+                        <option value="27">Do you like music?</option>
+                        <option value="28">Where is the nearest hospital?</option>
+                        <option value="29">Can you call a taxi?</option>
+                        <option value="30">I'm hungry</option>
+                        <option value="31">What is the weather like?</option>
+                        <option value="32">Can you show me the way?</option>
+                        <option value="33">Do you know where I can find a bank?</option>
+                        <option value="34">How do I get to the train station?</option>
+                        <option value="35">Can I use your phone?</option>
+                        <option value="36">Is there a pharmacy nearby?</option>
+                        <option value="37">Can you recommend a good restaurant?</option>
+                        <option value="38">How far is it to the airport?</option>
+                        <option value="39">Can I get a ticket to New York?</option>
+                        <option value="40">Where can I buy a bus ticket?</option>
+                        <option value="41">What time does the store open?</option>
+                        <option value="42">Can you help me with my luggage?</option>
+                        <option value="43">Is there a supermarket close by?</option>
+                        <option value="44">Can you tell me more about this place?</option>
+                        <option value="45">How long will it take to get there?</option>
+                        <option value="46">Do you accept credit cards?</option>
+                        <option value="47">Can I get the bill, please?</option>
+                        <option value="48">How do you feel today?</option>
+                        <option value="49">What did you eat for breakfast?</option>
+                        <option value="50">Do you want to go for a walk?</option>
+                        <option value="51">Can you pass me the salt?</option>
+                        <option value="52">What is your phone number?</option>
+                        <option value="53">Do you have a pen?</option>
+                        <option value="54">Can you drive me home?</option>
+                        <option value="55">What is your favorite movie?</option>
+                        <option value="56">Do you like sports?</option>
+                        <option value="57">What time do you go to bed?</option>
+                        <option value="58">Can you lend me some money?</option>
+                        <option value="59">Do you believe in ghosts?</option>
+                        <option value="60">Can you tell me a joke?</option>
+                        <option value="61">What is your favorite book?</option>
+                        <option value="62">Can I borrow your car?</option>
+                        <option value="63">I can</option>
+                        <option value="64">Can you</option>
+                        <option value="65">I'm going to</option>
+                        <option value="66">Are you going to</option>
+                        <option value="67">I have</option>
+                        <option value="68">Do you have</option>
+                        <option value="69">I like to</option>
+                        <option value="70">I want to</option>
+                        <option value="71">Do you want</option>
+                        <option value="72">I would like to</option>
+                        <option value="73">May I</option>
+                        <option value="74">Could you</option>
+                        <option value="75">I need</option>
+                        <option value="76">Do you need</option>
+                        <option value="77">I'm glad to</option>
+                        <option value="78">Do you want me to</option>
+                        <option value="79">Can you tell me</option>
+                        <option value="80">Let me</option>
+                        <option value="81">Let's</option>
+                        <option value="82">I feel like</option>
+                        <option value="83">You look</option>
+                        <option value="84">Thank you for</option>
+                        <option value="85">I think</option>
+                        <option value="86">How about</option>
+                        <option value="87">Why</option>
+                        <option value="88">I hope</option>
+                        <option value="89">I'm sure</option>
+                        <option value="90">Do you know</option>
+                        <option value="91">I have to</option>
+                        <option value="92">You don't have to</option>
+                        <option value="93">You must be</option>
+                        <option value="94">used to</option>
+                        <option value="95">How come</option>
+                        <option value="96">How was</option>
+                        <option value="97">Do you mind if</option>
+                        <option value="98">I've never</option>
+                        <option value="99">Maybe</option>
+                        <option value="100">I can swim</option>
+                        <option value="101">I can speak Spanish</option>
+                        <option value="102">I can cook</option>
+                        <option value="103">I can play the guitar</option>
+                        <option value="104">I can help you</option>
+                        <option value="105">Can you drive?</option>
+                        <option value="106">Can you come tomorrow?</option>
+                        <option value="107">Can you sing?</option>
+                        <option value="108">Can you lend me some money?</option>
+                        <option value="109">Can you open the window?</option>
+                        <option value="110">I'm going to study</option>
+                        <option value="111">I'm going to travel next weeks</option>
+                        <option value="112">I'm going to buy a new bicycle</option>
+                        <option value="113">I'm going to watch a movie</option>
+                        <option value="114">I'm going to eat pizza</option>
+                        <option value="115">Are you going to the party?</option>
+                        <option value="116">Are you going to help me?</option>
+                        <option value="117">Are you going to finish that?</option>
+                        <option value="118">Are you going to call her?</option>
+                        <option value="119">Are you going to the beach this weekend?</option>
+                        <option value="120">I have a cat</option>
+                        <option value="121">I have a headache</option>
+                        <option value="122">I have a new job</option>
+                        <option value="123">I have a question</option>
+                        <option value="124">I have some money</option>
+                        <option value="125">Do you have time tomorrow?</option>
+                        <option value="126">Do you have my book?</option>
+                        <option value="127">Do you have a minute?</option>
+                        <option value="128">Do you have any siblings?</option>
+                        <option value="129">Do you have pets?</option>
+                        <option value="130">I like to read</option>
+                        <option value="131">I like to dance</option>
+                        <option value="132">I like to travel</option>
+                        <option value="133">I like to draw</option>
+                        <option value="134">I like to listen to music</option>
+                        <option value="135">I want to go home</option>
+                        <option value="136">I want to see you</option>
+                        <option value="137">I want to eat sushi</option>
+                        <option value="138">I want to sleep</option>
+                        <option value="139">I want to study English</option>
+                        <option value="140">Do you want to go to the cinema?</option>
+                        <option value="141">Do you want to join us?</option>
+                        <option value="142">Do you want some help?</option>
+                        <option value="143">Do you want to dance?</option>
+                        <option value="144">Do you want some coffee?</option>
+                        <option value="145">I would like to travel to Japan</option>
+                        <option value="146">I would like to try that dish</option>
+                        <option value="147">I would like to learn to play the piano</option>
+                        <option value="148">I would like to see you again</option>
+                        <option value="149">May I come in?</option>
+                        <option value="150">May I ask you a question?</option>
+                        <option value="151">May I use your phone?</option>
+                        <option value="152">May I sit here?</option>
+                        <option value="153">May I join you?</option>
+                        <option value="154">Could you help me?</option>
+                        <option value="155">Could you tell me the time?</option>
+                        <option value="156">Could you call me later?</option>
+                        <option value="157">Could you repeat that?</option>
+                        <option value="158">Could you show me how to do this?</option>
+                        <option value="159">I need some money</option>
+                        <option value="160">I need to talk to you</option>
+                        <option value="161">I need a new computer</option>
+                        <option value="162">I need a break</option>
+                        <option value="163">I need your advice</option>
+                        <option value="164">Do you need directions?</option>
+                        <option value="165">Do you need help?</option>
+                        <option value="166">Do you need more time?</option>
+                        <option value="167">Do you need this book?</option>
+                        <option value="168">Do you need to go to the doctor?</option>
+                        <option value="169">I'm glad to see you</option>
+                        <option value="170">I'm glad to be here</option>
+                        <option value="171">I'm glad to help</option>
+                        <option value="172">I'm glad to know you're okay</option>
+                        <option value="173">I'm glad to hear that</option>
+                        <option value="174">Do you want me to help?</option>
+                        <option value="175">Do you want me to call you later?</option>
+                        <option value="176">Do you want me to cook dinner?</option>
+                        <option value="177">Do you want me to go with you?</option>
+                        <option value="178">Do you want me to leave?</option>
+                        <option value="179">Can you tell me the time?</option>
+                        <option value="180">Can you tell me where the bathroom is?</option>
+                        <option value="181">Can you tell me your name?</option>
+                        <option value="182">Can you tell me what happened?</option>
+                        <option value="183">Can you tell me your phone number?</option>
+                        <option value="184">Let me see</option>
+                        <option value="185">Let me help you</option>
+                        <option value="186">Let me think</option>
+                        <option value="187">Let me explain</option>
+                        <option value="188">Let me handle this</option>
+                        <option value="189">Let's go to the beach</option>
+                        <option value="190">Let's eat out tonight</option>
+                        <option value="191">Let's watch a movie</option>
+                        <option value="192">Let's dance</option>
+                        <option value="193">Let's take a break</option>
+                        <option value="194">I feel like eating pizza</option>
+                        <option value="195">I feel like dancing</option>
+                        <option value="196">I feel like going to the beach</option>
+                        <option value="197">I feel like crying</option>
+                        <option value="198">I feel like reading a book</option>
+                        <option value="199">You look tired</option>
+                        <option value="200">You look beautiful</option>
+                        <option value="201">You look happy</option>
+                        <option value="202">You look confused</option>
+                        <option value="203">You look younger</option>
+                        <option value="204">Thank you for your help</option>
+                        <option value="205">Thank you for the gift</option>
+                        <option value="206">Thank you for your time</option>
+                        <option value="207">Thank you for coming</option>
+                        <option value="208">Thank you for the advice</option>
+                        <option value="209">I think it's going to rain</option>
+                        <option value="210">I think you are right</option>
+                        <option value="211">I think this is the best option</option>
+                        <option value="212">I think she's mad at me</option>
+                        <option value="213">I think he's in love</option>
+                        <option value="214">How about we go to the cinema?</option>
+                        <option value="215">How about pizza for dinner?</option>
+                        <option value="216">How about taking a walk?</option>
+                        <option value="217">How about Saturday?</option>
+                        <option value="218">How about 5?</option>
+                        <option value="219">Why are you late?</option>
+                        <option value="220">Why is she crying?</option>
+                        <option value="221">Why did he leave?</option>
+                        <option value="222">Why can't I go?</option>
+                        <option value="223">Why did you do that?</option>
+                        <option value="224">I hope you feel better soon</option>
+                        <option value="225">I hope you enjoy your trip</option>
+                        <option value="226">I hope you have a great day</option>
+                        <option value="227">I hope she calls</option>
+                        <option value="228">I hope it doesn't rain</option>
+                        <option value="229">I'm sure it will be fine</option>
+                        <option value="230">I'm sure she's coming</option>
+                        <option value="231">I'm sure he didn't mean it</option>
+                        <option value="232">I'm sure you can do it</option>
+                        <option value="233">I'm sure they'll love the gift</option>
+                        <option value="234">Do you know the way to the station?</option>
+                        <option value="235">Do you know when the train leaves?</option>
+                        <option value="236">Do you know how to cook this dish?</option>
+                        <option value="237">Do you know the answer?</option>
+                        <option value="238">Do you know where my keys are?</option>
+                        <option value="239">I have to go now</option>
+                        <option value="240">I have to finish my homework</option>
+                        <option value="241">I have to call my mom</option>
+                        <option value="242">I have to buy some groceries</option>
+                        <option value="243">I have to wake up early tomorrow</option>
+                        <option value="244">You don't have to explain</option>
+                        <option value="245">You don't have to come if you don't want to</option>
+                        <option value="246">You don't have to pay me back</option>
+                        <option value="247">You don't have to worry about it</option>
+                        <option value="248">You don't have to bring anything</option>
+                        <option value="249">You must be joking</option>
+                        <option value="250">You must be proud of your achievements</option>
+                        <option value="251">You must be very busy these days</option>
+                        <option value="252">You must be hungry</option>
+                        <option value="253">You must be mistaken</option>
+                        <option value="254">I used to live in New York</option>
+                        <option value="255">She used to dance ballet</option>
+                        <option value="256">They used to be best friends</option>
+                        <option value="257">He used to hate vegetables</option>
+                        <option value="258">I used to play the piano</option>
+                        <option value="259">How come you're not going to the party?</option>
+                        <option value="260">How come she didn't call?</option>
+                        <option value="261">How come they're late?</option>
+                        <option value="262">How come you didn't tell me?</option>
+                        <option value="263">How come he knows that secret?</option>
+                        <option value="264">How was your day?</option>
+                        <option value="265">How was the movie?</option>
+                        <option value="266">How was the concert?</option>
+                        <option value="267">How was your trip?</option>
+                        <option value="268">How was your meeting?</option>
+                        <option value="269">Do you mind if I join you?</option>
+                        <option value="270">Do you mind if I open the window?</option>
+                        <option value="271">Do you mind if I take this seat?</option>
+                        <option value="272">Do you mind if I change the channel?</option>
+                        <option value="273">Do you mind if I call you later?</option>
+                        <option value="274">I've never been to Europe</option>
+                        <option value="275">I've never eaten sushi</option>
+                        <option value="276">I've never seen that movie</option>
+                        <option value="277">I've never met her</option>
+                        <option value="278">I've never tried skiing</option>
+                        <option value="279">Maybe I'll go to the park later</option>
+                        <option value="280">Maybe it's a good idea</option>
+                        <option value="281">Maybe she forgot to call</option>
+                        <option value="282">Maybe I'm wrong</option>
+                        <option value="283">Maybe it's too late</option>
+                        <option value="284">Yes</option>
+                        <option value="285">No</option>
+                        <option value="286">Please</option>
+                        <option value="287">Hello</option>
+                        <option value="288">Good morning</option>
+                        <option value="289">Good afternoon</option>
+                        <option value="290">Good night</option>
+                        <option value="291">Good bye</option>
+                        <option value="292">See you later</option>
+                        <option value="293">That's all right</option>
+                        <option value="294">I am sorry</option>
+                        <option value="295">Excuse me</option>
+                        <option value="296">Mr</option>
+                        <option value="297">Mrs</option>
+                        <option value="298">Miss</option>
+                        <option value="299">How are you?</option>
+                        <option value="300">Very well, thanks</option>
+                        <option value="301">I am</option>
+                        <option value="302">I am</option>
+                        <option value="303">I have</option>
+                        <option value="304">It is</option>
+                        <option value="305">It is</option>
+                        <option value="306">It is here</option>
+                        <option value="307">It is there</option>
+                        <option value="308">This one</option>
+                        <option value="309">I would like</option>
+                        <option value="310">It is good</option>
+                        <option value="311">It is bad</option>
+                        <option value="312">It is important</option>
+                        <option value="313">That's it</option>
+                        <option value="314">I love you</option>
+                        <option value="315">I got it</option>
+                        <option value="316">I am happy</option>
+                        <option value="317">I am tired</option>
+                        <option value="318">I am busy</option>
+                        <option value="319">It is ready</option>
+                        <option value="320">Once</option>
+                        <option value="321">Many times</option>
+                        <option value="322">Sometimes</option>
+                        <option value="323">Again</option>
+                        <option value="324">Maybe</option>
+                        <option value="325">This time</option>
+                        <option value="326">Everything</option>
+                        <option value="327">That's all</option>
+                        <option value="328">Nothing</option>
+                        <option value="329">Never</option>
+                        <option value="330">What do you need?</option>
+                        <option value="331">I think so</option>
+                        <option value="332">I hope so</option>
+                        <option value="333">Glad to meet you</option>
+                        <option value="334">How do you feel?</option>
+                        <option value="335">Do you mind?</option>
+                        <option value="336">Sure</option>
+                        <option value="337">Give them my regards</option>
+                        <option value="338">How do you do?</option>
+                        <option value="339">I apologize</option>
+                        <option value="340">See you later</option>
+                        <option value="341">I am very grateful</option>
+                        <option value="342">So long</option>
+                        <option value="343">How much?</option>
+                        <option value="344">Why?</option>
+                        <option value="345">Which one?</option>
+                        <option value="346">Where is?</option>
+                        <option value="347">When?</option>
+                        <option value="348">Do you have?</option>
+                        <option value="349">How?</option>
+                        <option value="350">What?</option>
+                        <option value="351">My name is…</option>
+                        <option value="352">My address is…</option>
+                        <option value="353">This is my name and my address</option>
+                        <option value="354">I do not understand</option>
+                        <option value="355">Please, speak more slowly</option>
+                        <option value="356">What does that mean?</option>
+                        <option value="357">Do you speak Spanish?</option>
+                        <option value="358">I do not speak English</option>
+                        <option value="359">Try to understand me</option>
+                        <option value="360">I speak a little English</option>
+                        <option value="361">Help!</option>
+                        <option value="362">Help me!</option>
+                        <option value="363">Fire</option>
+                        <option value="364">Danger!</option>
+                        <option value="365">Warning / Careful</option>
+                        <option value="366">Call an ambulance!</option>
+                        <option value="367">This is an emergency</option>
+                        <option value="368">I am lost</option>
+                        <option value="369">I am being chased</option>
+                        <option value="370">I have lost my money</option>
+                        <option value="371">I had an accident</option>
+                        <option value="372">My car is broken</option>
+                        <option value="373">Call the police</option>
+                        <option value="374">I have been robbed</option>
+                        <option value="375">Be careful!</option>
+                        <option value="376">I will get you</option>
+                        <option value="377">Self defense</option>
+                        <option value="378">Get out of here!</option>
+                        <option value="379">I am looking for a job</option>
+                        <option value="380">I need work</option>
+                        <option value="381">Help wanted</option>
+                        <option value="382">I would like an appointment</option>
+                        <option value="383">All I want is to work</option>
+                        <option value="384">I have experience in this work</option>
+                        <option value="385">Who is my supervisor?</option>
+                        <option value="386">I did not know</option>
+                        <option value="387">How much will I make?</option>
+                        <option value="388">I want to be sure</option>
+                        <option value="389">This is my social security number</option>
+                        <option value="390">I can work overtime</option>
+                        <option value="391">I have not been paid</option>
+                        <option value="392">I need to leave early, could it be possible?</option>
+                        <option value="393">I am sorry I am late</option>
+                        <option value="394">Can I help you in your work?</option>
+                        <option value="395">Put it in writing</option>
+                        <option value="396">I did not know</option>
+                        <option value="397">I can work nights and weekends</option>
+                        <option value="398">Recently, I worked at a…</option>
+                        <option value="399">Can you help me?</option>
+                        <option value="400">I am very busy</option>
+                        <option value="401">I like your shirt</option>
+                        <option value="402">It is a good idea</option>
+                        <option value="403">I will try</option>
+                        <option value="404">See you tomorrow</option>
+                        <option value="405">Can I use your phone</option>
+                        <option value="406">I have a question</option>
+                        <option value="407">This is interesting</option>
+                        <option value="408">I need to practice more</option>
+                        <option value="409">What time does it start?</option>
+                        <option value="410">I have to go</option>
+                        <option value="411">What do you recommend?</option>
+                        <option value="412">I can't wait</option>
+                        <option value="413">I feel better</option>
+                        <option value="414">I need a doctor</option>
+                        <option value="415">It is cold outside</option>
+                        <option value="416">I am excited</option>
+                        <option value="417">Do you have siblings?</option>
+                        <option value="418">I have a headache</option>
+                        <option value="419">Where were you born?</option>
+                        <option value="420">I do not feel well</option>
+                        <option value="421">I have no idea</option>
+                        <option value="422">I don't understand anything</option>
+                        <option value="423">I'm happy to see you</option>
+                        <option value="424">Can you give me some advice?</option>
+                        <option value="425">Let me think about it</option>
+                        <option value="426">That's for sure</option>
+                        <option value="427">From now on</option>
+                        <option value="428">Be careful</option>
+                        <option value="429">You're right</option>
+                        <option value="430">Good news</option>
+                        <option value="431">If you say so</option>
+                        <option value="432">I can do it</option>
+                        <option value="433">Wait for me</option>
+                        <option value="434">I promise</option>
+                        <option value="435">Too late</option>
+                        <option value="436">Good job</option>
+                        <option value="437">You can't miss it</option>
+                        <option value="438">No hurry</option>
+                        <option value="439">Where can I park?</option>
+                        <option value="440">I can't wait</option>
+                        <option value="441">I agree to the plan</option>
+                        <option value="442">I have a meeting</option>
+                        <option value="443">This can't be happening</option>
+                        <option value="444">Better than expected</option>
+                        <option value="445">That's a great idea</option>
+                        <option value="446">I have no idea</option>
+                        <option value="447">So far so good</option>
+                        <option value="448">It's a pleasure to meet you</option>
+                        <option value="449">I can't wait to see you</option>
+                        <option value="450">God bless you</option>
+                        <option value="451">Better safe than sorry</option>
+                        <option value="452">Hello, how are you?</option>
+                        <option value="453">What is your name?</option>
+                        <option value="454">I am a student</option>
+                        <option value="455">Where is the bathroom?</option>
+                        <option value="456">How much does it cost?</option>
+                        <option value="457">Can you help me?</option>
+                        <option value="458">I like to eat</option>
+                        <option value="459">What time is it?</option>
+                        <option value="460">I love my family</option>
+                        <option value="461">This is my friend</option>
+                        <option value="462">Where do you live?</option>
+                        <option value="463">I have a cat</option>
+                        <option value="464">What is your favorite color?</option>
+                        <option value="465">She is a teacher</option>
+                        <option value="466">Do you speak English?</option>
+                        <option value="467">It's a beautiful day</option>
+                        <option value="468">I want to learn</option>
+                        <option value="469">How are you feeling?</option>
+                        <option value="470">Where is the library?</option>
+                        <option value="471">Can you repeat that?</option>
+                        <option value="472">He is my brother</option>
+                        <option value="473">I need some water</option>
+                        <option value="474">I'm from the United States</option>
+                        <option value="475">What's your favorite food?</option>
+                        <option value="476">I like to read</option>
+                        <option value="477">Where is the nearest hospital?</option>
+                        <option value="478">I'm a beginner</option>
+                        <option value="479">Can you show me the way?</option>
+                    </select>
+                </div>
+
+                <!-- Input de Traducción -->
+                <div class="mb-6">
+                    <label class="block text-gray-700 mb-2">Your Translation 🖊️</label>
+                    <textarea id="translation-input"
+                        class="w-full rounded-lg border-2 border-indigo-200 p-3 h-24 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                        placeholder="Type your Spanish translation here..."></textarea>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="flex space-x-4">
+                    <button id="play-btn"
+                        class="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2">
+                        <span>🔊</span> Listen
+                    </button>
+                    <button id="check-btn"
+                        class="flex-1 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2">
+                        <span>✅</span> Check
+                    </button>
+                </div>
+            </div>
+
+            <!-- Panel de Resultados -->
+            <div class="bg-white rounded-2xl shadow-xl p-6 animal-card">
+                <h2 class="text-2xl font-bold text-indigo-800 mb-6">Results & Progress 📊</h2>
+                
+                <!-- Frase Actual -->
+                <div id="current-phrase" class="text-center mb-6 p-4 bg-indigo-50 rounded-lg transform transition-all">
+                    <h1 class="text-xl font-bold text-indigo-800">Select a phrase to begin! 🎯</h1>
+                </div>
+
+                <!-- Guía de Pronunciación -->
+                <div id="pronunciation-guide" class="mb-6 p-4 bg-green-50 rounded-lg">
+                    <h4 class="font-bold text-green-800 mb-2">Pronunciation Guide 🗣️</h4>
+                    <code class="text-green-700 block p-2 bg-green-100 rounded">Choose a phrase to see pronunciation</code>
+                </div>
+
+                <!-- Área de Feedback -->
+                <div id="feedback-area" class="mb-6">
+                    <!-- El feedback se insertará aquí -->
+                </div>
+
+                <!-- Estadísticas -->
+                <div class="bg-indigo-50 rounded-lg p-4">
+                    <h4 class="font-bold text-indigo-800 mb-4 flex items-center gap-2">
+                        <span>📈</span> Your Progress
+                    </h4>
+                    <div id="stats-area" class="grid grid-cols-2 gap-4 text-sm text-indigo-600">
+                        <!-- Las estadísticas se insertarán aquí -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    // Configuración de Azure Speech Services
+    const AZURE_CONFIG = {
+        key: 'TU_AZURE_KEY', // Reemplazar con tu key
+        region: 'eastus'     // Reemplazar con tu región
+    };
+    
+    // Voces neurales de alta calidad
+    const VOICES = {
+        'us-female-neural': {
+            name: 'en-US-JennyMultilingualNeural',
+            style: 'friendly'
+        },
+        'us-male-neural': {
+            name: 'en-US-GuyNeural',
+            style: 'newscast'
+        },
+        'uk-female-neural': {
+            name: 'en-GB-SoniaNeural',
+            style: 'friendly'
+        },
+        'uk-male-neural': {
+            name: 'en-GB-RyanNeural',
+            style: 'newscast'
+        }
+    };
+    
+    // Datos de las frases
+    const phrases = {
+        1: {
+            english: "Hello, how are you?",
+            spanish: "Hola, ¿cómo estás?",
+            pronunciation: "Hel-oh, how ar yoo?"
+          },
+          2: {
+            english: "Good morning",
+            spanish: "Buenos días",
+            pronunciation: "Good mor-ning"
+          },
+          3: {
+            english: "Have a nice day",
+            spanish: "Que tengas un buen día",
+            pronunciation: "Hav a nais day"
+          },
+          4: {
+            english: "Thank you very much",
+            spanish: "Muchas gracias",
+            pronunciation: "Thank yoo veh-ree much"
+          },
+          5: {
+            english: "Please sit down",
+            spanish: "Por favor siéntate",
+            pronunciation: "Pleez sit down"
+          },
+          6: {
+            english: "Can you help me?",
+            spanish: "¿Puedes ayudarme?",
+            pronunciation: "Can yoo help mee?"
+          },
+          7: {
+            english: "What time is it?",
+            spanish: "¿Qué hora es?",
+            pronunciation: "Wot taim iz it?"
+          },
+          8: {
+            english: "Where is the bathroom?",
+            spanish: "¿Dónde está el baño?",
+            pronunciation: "Wair iz the bath-room?"
+          },
+          9: {
+            english: "I don't understand",
+            spanish: "No entiendo",
+            pronunciation: "Eye don't un-der-stand"
+          },
+          10: {
+            english: "Could you repeat that?",
+            spanish: "¿Podrías repetir eso?",
+            pronunciation: "Could yoo re-peat that?"
+          },
+          11: {
+            english: "I'm sorry",
+            spanish: "Lo siento",
+            pronunciation: "Aym sor-ree"
+          },
+          12: {
+            english: "Excuse me",
+            spanish: "Disculpe",
+            pronunciation: "Eks-kyoos mee"
+          },
+          13: {
+            english: "How much does it cost?",
+            spanish: "¿Cuánto cuesta?",
+            pronunciation: "How much duz it cost?"
+          },
+          14: {
+            english: "I'm lost",
+            spanish: "Estoy perdido",
+            pronunciation: "Aym lost"
+          },
+          15: {
+            english: "Can you speak slower?",
+            spanish: "¿Puedes hablar más despacio?",
+            pronunciation: "Can yoo speek slow-er?"
+          },
+          16: {
+            english: "Where are you from?",
+            spanish: "¿De dónde eres?",
+            pronunciation: "Wair ar yoo frum?"
+          },
+          17: {
+            english: "What is your name?",
+            spanish: "¿Cuál es tu nombre?",
+            pronunciation: "Wot iz yor naim?"
+          },
+          18: {
+            english: "How old are you?",
+            spanish: "¿Cuántos años tienes?",
+            pronunciation: "How old ar yoo?"
+          },
+          19: {
+            english: "What do you do?",
+            spanish: "¿A qué te dedicas?",
+            pronunciation: "Wot doo yoo doo?"
+          },
+          20: {
+            english: "I like your shirt",
+            spanish: "Me gusta tu camisa",
+            pronunciation: "Eye laik yor shirt"
+          },
+          21: {
+            english: "I need help",
+            spanish: "Necesito ayuda",
+            pronunciation: "Eye need help"
+          },
+          22: {
+            english: "Where do you live?",
+            spanish: "¿Dónde vives?",
+            pronunciation: "Wair doo yoo liv?"
+          },
+          23: {
+            english: "Can I have a coffee?",
+            spanish: "¿Puedo tomar un café?",
+            pronunciation: "Kan eye hav a cof-ee?"
+          },
+          24: {
+            english: "Do you have pets?",
+            spanish: "¿Tienes mascotas?",
+            pronunciation: "Doo yoo hav pets?"
+          },
+          25: {
+            english: "What is your favorite color?",
+            spanish: "¿Cuál es tu color favorito?",
+            pronunciation: "Wot iz yor fay-vrit cuh-lor?"
+          },
+          26: {
+            english: "How was your day?",
+            spanish: "¿Cómo fue tu día?",
+            pronunciation: "How wuz yor day?"
+          },
+          27: {
+            english: "Do you like music?",
+            spanish: "¿Te gusta la música?",
+            pronunciation: "Doo yoo laik myoo-zik?"
+          },
+          28: {
+            english: "Where is the nearest hospital?",
+            spanish: "¿Dónde está el hospital más cercano?",
+            pronunciation: "Wair iz the neer-est hos-pit-ul?"
+          },
+          29: {
+            english: "Can you call a taxi?",
+            spanish: "¿Puedes llamar un taxi?",
+            pronunciation: "Kan yoo call a tak-see?"
+          },
+          30: {
+            english: "I'm hungry",
+            spanish: "Tengo hambre",
+            pronunciation: "Aym hun-gree"
+          },
+          31: {
+            english: "What is the weather like?",
+            spanish: "¿Cómo está el clima?",
+            pronunciation: "Wot iz the weth-er laik?"
+          },
+          32: {
+            english: "Can you show me the way?",
+            spanish: "¿Puedes mostrarme el camino?",
+            pronunciation: "Kan yoo show mee the way?"
+          },
+          33: {
+            english: "Do you know where I can find a bank?",
+            spanish: "¿Sabes dónde puedo encontrar un banco?",
+            pronunciation: "Doo yoo noe wair eye kan find a bank?"
+          },
+          34: {
+            english: "How do I get to the train station?",
+            spanish: "¿Cómo llego a la estación de tren?",
+            pronunciation: "How doo eye get too the train sta-shun?"
+          },
+          35: {
+            english: "Can I use your phone?",
+            spanish: "¿Puedo usar tu teléfono?",
+            pronunciation: "Kan eye yooz yor fone?"
+          },
+          36: {
+            english: "Is there a pharmacy nearby?",
+            spanish: "¿Hay una farmacia cerca?",
+            pronunciation: "Iz thair a farm-a-see neer-bai?"
+          },
+          37: {
+            english: "Can you recommend a good restaurant?",
+            spanish: "¿Puedes recomendarme un buen restaurante?",
+            pronunciation: "Kan yoo re-kom-end a good res-tau-rant?"
+          },
+          38: {
+            english: "How far is it to the airport?",
+            spanish: "¿Qué tan lejos está el aeropuerto?",
+            pronunciation: "How far iz it too the air-port?"
+          },
+          39: {
+            english: "Can I get a ticket to New York?",
+            spanish: "¿Puedo obtener un boleto a Nueva York?",
+            pronunciation: "Kan eye get a tick-it too Nyu York?"
+          },
+          40: {
+            english: "Where can I buy a bus ticket?",
+            spanish: "¿Dónde puedo comprar un boleto de autobús?",
+            pronunciation: "Wair kan eye buy a bus tick-it?"
+          },
+          41: {
+            english: "What time does the store open?",
+            spanish: "¿A qué hora abre la tienda?",
+            pronunciation: "Wot taim duz the stor oh-pen?"
+          },
+          42: {
+            english: "Can you help me with my luggage?",
+            spanish: "¿Puedes ayudarme con mi equipaje?",
+            pronunciation: "Kan yoo help mee with my lug-gage?"
+          },
+          43: {
+            english: "Is there a supermarket close by?",
+            spanish: "¿Hay un supermercado cerca?",
+            pronunciation: "Iz thair a super-mar-kit klose bai?"
+          },
+          44: {
+            english: "Can you tell me more about this place?",
+            spanish: "¿Puedes decirme más sobre este lugar?",
+            pronunciation: "Kan yoo tel mee mor about this place?"
+          },
+          45: {
+            english: "How long will it take to get there?",
+            spanish: "¿Cuánto tiempo tomará llegar allí?",
+            pronunciation: "How long wil it take too get thair?"
+          },
+          46: {
+            english: "Do you accept credit cards?",
+            spanish: "¿Aceptan tarjetas de crédito?",
+            pronunciation: "Doo yoo ak-sept cred-it cards?"
+          },
+          47: {
+            english: "Can I get the bill, please?",
+            spanish: "¿Puedo obtener la cuenta, por favor?",
+            pronunciation: "Kan eye get the bil, pleez?"
+          },
+          48: {
+            english: "How do you feel today?",
+            spanish: "¿Cómo te sientes hoy?",
+            pronunciation: "How doo yoo feel too-day?"
+          },
+          49: {
+            english: "What did you eat for breakfast?",
+            spanish: "¿Qué comiste en el desayuno?",
+            pronunciation: "Wot did yoo eet for brek-fust?"
+          },
+          50: {
+            english: "Do you want to go for a walk?",
+            spanish: "¿Quieres ir a dar un paseo?",
+            pronunciation: "Doo yoo want too go for a walk?"
+          },
+          51: {
+            english: "Can you pass me the salt?",
+            spanish: "¿Puedes pasarme la sal?",
+            pronunciation: "Kan yoo pass mee the salt?"
+          },
+          52: {
+            english: "What is your phone number?",
+            spanish: "¿Cuál es tu número de teléfono?",
+            pronunciation: "Wot iz yor fone num-ber?"
+          },
+          53: {
+            english: "Do you have a pen?",
+            spanish: "¿Tienes un bolígrafo?",
+            pronunciation: "Doo yoo hav a pen?"
+          },
+          54: {
+            english: "Can you drive me home?",
+            spanish: "¿Puedes llevarme a casa?",
+            pronunciation: "Kan yoo drive mee home?"
+          },
+          55: {
+            english: "What is your favorite movie?",
+            spanish: "¿Cuál es tu película favorita?",
+            pronunciation: "Wot iz yor fay-vrit moo-vee?"
+          },
+          56: {
+            english: "Do you like sports?",
+            spanish: "¿Te gustan los deportes?",
+            pronunciation: "Doo yoo laik sports?"
+          },
+          57: {
+            english: "What time do you go to bed?",
+            spanish: "¿A qué hora te acuestas?",
+            pronunciation: "Wot taim doo yoo go too bed?"
+          },
+          58: {
+            english: "Can you lend me some money?",
+            spanish: "¿Puedes prestarme algo de dinero?",
+            pronunciation: "Kan yoo lend mee sum mun-ee?"
+          },
+          59: {
+            english: "Do you believe in ghosts?",
+            spanish: "¿Crees en fantasmas?",
+            pronunciation: "Doo yoo be-leev in ghosts?"
+          },
+          60: {
+            english: "Can you tell me a joke?",
+            spanish: "¿Puedes contarme un chiste?",
+            pronunciation: "Kan yoo tel mee a joke?"
+          },
+          61: {
+            english: "What is your favorite book?",
+            spanish: "¿Cuál es tu libro favorito?",
+            pronunciation: "Wot iz yor fay-vrit book?"
+          },
+          62: {
+            english: "Can I borrow your car?",
+            spanish: "¿Puedo pedir prestado tu coche?",
+            pronunciation: "Kan eye bor-oh yor car?"
+          },
+          63: {
+            english: "I can",
+            spanish: "Puedo",
+            pronunciation: "ai ken"
+          },
+          64: {
+            english: "Can you",
+            spanish: "Puedes",
+            pronunciation: "ken iu"
+          },
+          65: {
+            english: "I'm going to",
+            spanish: "voy a",
+            pronunciation: "aim going tu"
+          },
+          66: {
+            english: "Are you going to",
+            spanish: "Vas a",
+            pronunciation: "ar iu going tu"
+          },
+          67: {
+            english: "I have",
+            spanish: "Tengo",
+            pronunciation: "I jaf"
+          },
+          68: {
+            english: "Do you have",
+            spanish: "Tienes",
+            pronunciation: "du iu jaf"
+          },
+          69: {
+            english: "I like to",
+            spanish: "Me gusta",
+            pronunciation: "ai laik tu"
+          },
+          70: {
+            english: "I want to",
+            spanish: "Quiero",
+            pronunciation: "ai want tu"
+          },
+          71: {
+            english: "Do you want",
+            spanish: "Quieres",
+            pronunciation: "du iu want"
+          },
+          72: {
+            english: "I would like to",
+            spanish: "Me gustaría",
+            pronunciation: "ai wud laik tu"
+          },
+          73: {
+            english: "May I",
+            spanish: "Puedo",
+            pronunciation: "mei ai"
+          },
+          74: {
+            english: "Could you",
+            spanish: "Podrías",
+            pronunciation: "kud iu"
+          },
+          75: {
+            english: "I need",
+            spanish: "Necesito",
+            pronunciation: "ai niid"
+          },
+          76: {
+            english: "Do you need",
+            spanish: "Necesitas",
+            pronunciation: "du iu niid"
+          },
+          77: {
+            english: "I'm glad to",
+            spanish: "Me alegra",
+            pronunciation: "aim glad tu"
+          },
+          78: {
+            english: "Do you want me to",
+            spanish: "Quieres que",
+            pronunciation: "du iu want me tu"
+          },
+          79: {
+            english: "Can you tell me",
+            spanish: "Puedes decirme",
+            pronunciation: "ken iu tel mi"
+          },
+          80: {
+            english: "Let me",
+            spanish: "Déjame",
+            pronunciation: "let mi"
+          },
+          81: {
+            english: "Let's",
+            spanish: "Vamos a",
+            pronunciation: "lets"
+          },
+          82: {
+            english: "I feel like",
+            spanish: "Tengo ganas de",
+            pronunciation: "ai fil laik"
+          },
+          83: {
+            english: "You look",
+            spanish: "Pareces",
+            pronunciation: "iu luk"
+          },
+          84: {
+            english: "Thank you for",
+            spanish: "Gracias por",
+            pronunciation: "zenk iu for"
+          },
+          85: {
+            english: "I think",
+            spanish: "Creo que",
+            pronunciation: "ai zink"
+          },
+          86: {
+            english: "How about",
+            spanish: "Qué tal si",
+            pronunciation: "jau abaut"
+          },
+          87: {
+            english: "Why",
+            spanish: "Por qué",
+            pronunciation: "wai"
+          },
+          88: {
+            english: "I hope",
+            spanish: "Espero que",
+            pronunciation: "ai joup"
+          },
+          89: {
+            english: "I'm sure",
+            spanish: "Estoy seguro",
+            pronunciation: "aim shur"
+          },
+          90: {
+            english: "Do you know",
+            spanish: "Sabes",
+            pronunciation: "du iu nou"
+          },
+          91: {
+            english: "I have to",
+            spanish: "Tengo que",
+            pronunciation: "ai jaf tu"
+          },
+          92: {
+            english: "You don't have to",
+            spanish: "No tienes que",
+            pronunciation: "iu dont jaf tu"
+          },
+          93: {
+            english: "You must be",
+            spanish: "Debes estar",
+            pronunciation: "iu mast bi"
+          },
+          94: {
+            english: "used to",
+            spanish: "Solía",
+            pronunciation: "uis tu"
+          },
+          95: {
+            english: "How come",
+            spanish: "Cómo es que",
+            pronunciation: "jau kom"
+          },
+          96: {
+            english: "How was",
+            spanish: "Cómo fue",
+            pronunciation: "jau wos"
+          },
+          97: {
+            english: "Do you mind if",
+            spanish: "Te importa si",
+            pronunciation: "du iu maind if"
+          },
+          98: {
+            english: "I've never",
+            spanish: "Nunca he",
+            pronunciation: "aif never"
+          },
+          99: {
+            english: "Maybe",
+            spanish: "Quizás",
+            pronunciation: "meibi"
+          },
+          100: {
+            english: "I can swim",
+            spanish: "Puedo nadar",
+            pronunciation: "ai ken suim"
+          },
+          101: {
+            english: "I can speak Spanish",
+            spanish: "Puedo hablar español",
+            pronunciation: "ai ken spik spanish"
+          },
+          102: {
+            english: "I can cook",
+            spanish: "Puedo cocinar",
+            pronunciation: "ai ken kuk"
+          },
+          103: {
+            english: "I can play the guitar",
+            spanish: "Puedo tocar la guitarra",
+            pronunciation: "ai ken plei de guitar"
+          },
+          104: {
+            english: "I can help you",
+            spanish: "Puedo ayudarte",
+            pronunciation: "ai ken jelp iu"
+          },
+          105: {
+            english: "Can you drive?",
+            spanish: "¿Puedes conducir?",
+            pronunciation: "ken iu draif?"
+          },
+          106: {
+            english: "Can you come tomorrow?",
+            spanish: "¿Puedes venir mañana?",
+            pronunciation: "ken iu kom tumorrou?"
+          },
+          107: {
+            english: "Can you sing?",
+            spanish: "¿Puedes cantar?",
+            pronunciation: "ken iu sing?"
+          },
+          108: {
+            english: "Can you lend me some money?",
+            spanish: "¿Puedes prestarme algo de dinero?",
+            pronunciation: "ken iu lend mi som mani?"
+          },
+          109: {
+            english: "Can you open the window?",
+            spanish: "¿Puedes abrir la ventana?",
+            pronunciation: "ken iu oupen de window?"
+          },
+          110: {
+            english: "I'm going to study",
+            spanish: "Voy a estudiar",
+            pronunciation: "aim going tu stadi"
+          },
+          111: {
+            english: "I'm going to travel next weeks",
+            spanish: "Voy a viajar la próxima semana",
+            pronunciation: "aim going tu travel next wik"
+          },
+          112: {
+            english: "I'm going to buy a new bicycle",
+            spanish: "Voy a comprar una bicicleta nueva",
+            pronunciation: "aim going tu bai a niu baicicol"
+          },
+          113: {
+            english: "I'm going to watch a movie",
+            spanish: "Voy a ver una pelicula",
+            pronunciation: "aim going tu wach a muvi"
+          },
+          114: {
+            english: "I'm going to eat pizza",
+            spanish: "Voy a comer pizza",
+            pronunciation: "aim going tu it pizza"
+          },
+          115: {
+            english: "Are you going to the party?",
+            spanish: "¿Vas a la fiesta?",
+            pronunciation: "ar iu going tu de pari?"
+          },
+          116: {
+            english: "Are you going to help me?",
+            spanish: "¿Vas a ayudarme?",
+            pronunciation: "ar iu going tu jelp mi?"
+          },
+          117: {
+            english: "Are you going to finish that?",
+            spanish: "¿Vas a terminar eso?",
+            pronunciation: "ar iu going tu finish dat?"
+          },
+          118: {
+            english: "Are you going to call her?",
+            spanish: "¿Vas a llamarla?",
+            pronunciation: "ar iu going tu kall jer?"
+          },
+          119: {
+            english: "Are you going to the beach this weekend?",
+            spanish: "¿Vas a la playa este fin de semana?",
+            pronunciation: "ar iu going tu de bich dis wikend?"
+          },
+          120: {
+            english: "I have a cat",
+            spanish: "Tengo un gato",
+            pronunciation: "I jaf a cat"
+          },
+          121: {
+            english: "I have a headache",
+            spanish: "Tengo dolor de cabeza",
+            pronunciation: "I jaf a jedeik"
+          },
+          122: {
+            english: "I have a new job",
+            spanish: "Tengo un nuevo trabajo",
+            pronunciation: "I jaf a niu yob"
+          },
+          123: {
+            english: "I have a question",
+            spanish: "Tengo una pregunta",
+            pronunciation: "I jaf a kuestshon"
+          },
+          124: {
+            english: "I have some money",
+            spanish: "Tengo algo de dinero",
+            pronunciation: "I jaf a som mani"
+          },
+          125: {
+            english: "Do you have time tomorrow?",
+            spanish: "¿Tienes tiempo mañana?",
+            pronunciation: "du iu jaf taim tumorrou?"
+          },
+          126: {
+            english: "Do you have my book?",
+            spanish: "¿Tienes mi libro?",
+            pronunciation: "du iu jaf my buk?"
+          },
+          127: {
+            english: "Do you have a minute?",
+            spanish: "¿Tienes un minuto?",
+            pronunciation: "du iu jaf a minet?"
+          },
+          128: {
+            english: "Do you have any siblings?",
+            spanish: "¿Tienes hermanos?",
+            pronunciation: "du iu jaf eni siblings?"
+          },
+          129: {
+            english: "Do you have pets?",
+            spanish: "¿Tienes mascotas?",
+            pronunciation: "du iu jaf pets?"
+          },
+          130: {
+            english: "I like to read",
+            spanish: "Me gusta leer",
+            pronunciation: "ai laik tu riid"
+          },
+          131: {
+            english: "I like to dance",
+            spanish: "Me gusta bailar",
+            pronunciation: "ai laik tu dens"
+          },
+          132: {
+            english: "I like to travel",
+            spanish: "Me gusta viajar",
+            pronunciation: "ai laik tu travel"
+          },
+          133: {
+            english: "I like to draw",
+            spanish: "Me gusta dibujar",
+            pronunciation: "ai laik tu dro"
+          },
+          134: {
+            english: "I like to listen to music",
+            spanish: "Me gusta escuchar música",
+            pronunciation: "ai laik tu lisen tu miusic"
+          },
+          135: {
+            english: "I want to go home",
+            spanish: "Quiero ir a casa",
+            pronunciation: "ai want tu gou joum"
+          },
+          136: {
+            english: "I want to see you",
+            spanish: "Quiero verte",
+            pronunciation: "ai want tu sii iu"
+          },
+          137: {
+            english: "I want to eat sushi",
+            spanish: "Quiero comer sushi",
+            pronunciation: "ai want tu it sushi"
+          },
+          138: {
+            english: "I want to sleep",
+            spanish: "Quiero dormir",
+            pronunciation: "ai want tu slip"
+          },
+          139: {
+            english: "I want to study english",
+            spanish: "Quiero estudiar inglés",
+            pronunciation: "ai want tu stadi inglish"
+          },
+          140: {
+            english: "Do you want to go to the cinema?",
+            spanish: "¿Quieres ir al cine?",
+            pronunciation: "du iu want tu gou tu de cinema?"
+          },
+          141: {
+            english: "Do you want to join us?",
+            spanish: "¿Quieres unirte a nosotros?",
+            pronunciation: "du iu want tu yoin as?"
+          },
+          142: {
+            english: "Do you want some help?",
+            spanish: "¿Quieres ayuda?",
+            pronunciation: "du iu want som jelp?"
+          },
+          143: {
+            english: "Do you want to dance?",
+            spanish: "¿Quieres bailar?",
+            pronunciation: "du iu want tu dens?"
+          },
+          144: {
+            english: "Do you want some coffee?",
+            spanish: "¿Quieres café?",
+            pronunciation: "du iu want som kofi?"
+          },
+          145: {
+            english: "I would like to travel to Japan",
+            spanish: "Me gustaría viajar a Japón",
+            pronunciation: "ai wud laik tu travel tu yapan"
+          },
+          146: {
+            english: "I would like to try that dish",
+            spanish: "Me gustaría probar ese plato",
+            pronunciation: "ai wud laik tu trai dat dish"
+          },
+          147: {
+            english: "I would like to learn to play the piano",
+            spanish: "Me gustaría aprender a tocar el piano",
+            pronunciation: "ai wud laik tu lern tu plei de piano"
+          },
+          148: {
+            english: "I would like to see you again",
+            spanish: "Me gustaría verte de nuevo",
+            pronunciation: "ai wud laik tu si iu aguén"
+          },
+          149: {
+            english: "May I come in?",
+            spanish: "¿Puedo entrar?",
+            pronunciation: "mei ai kom in?"
+          },
+          150: {
+            english: "May I ask you a question?",
+            spanish: "¿Puedo hacerte una pregunta?",
+            pronunciation: "mei ai ask iu a kuestshon?"
+          },
+          151: {
+            english: "May I use your phone?",
+            spanish: "¿Puedo usar tu teléfono?",
+            pronunciation: "mei ai ius ior fon?"
+          },
+          152: {
+            english: "May I sit here?",
+            spanish: "¿Puedo sentarme aquí?",
+            pronunciation: "mei ai sit jier?"
+          },
+          153: {
+            english: "May I join you?",
+            spanish: "¿Puedo unirme a ustedes?",
+            pronunciation: "mei ai yoin iu?"
+          },
+          154: {
+            english: "Could you help me?",
+            spanish: "¿Podrías ayudarme?",
+            pronunciation: "kud iu jelp mi?"
+          },
+          155: {
+            english: "Could you tell me the time?",
+            spanish: "¿Podrías decirme la hora?",
+            pronunciation: "kud iu tell mi de taim?"
+          },
+          156: {
+            english: "Could you call me later?",
+            spanish: "¿Podrías llamarme más tarde?",
+            pronunciation: "kud iu kol mi leirer?"
+          },
+          157: {
+            english: "Could you repeat that?",
+            spanish: "¿Podrías repetir eso?",
+            pronunciation: "kud iu ripit dat?"
+          },
+          158: {
+            english: "Could you show me how to do this?",
+            spanish: "¿Podrías mostrarme cómo hacer esto?",
+            pronunciation: "kud iu show mi jau tu du dis?"
+          },
+          159: {
+            english: "I need some money",
+            spanish: "Necesito algo de dinero",
+            pronunciation: "ai niid som mani"
+          },
+          160: {
+            english: "I need to talk to you",
+            spanish: "Necesito hablar contigo",
+            pronunciation: "ai niid tu tolk tu iu"
+          },
+          161: {
+            english: "I need a new computer",
+            spanish: "Necesito una computadora nueva",
+            pronunciation: "ai niid a niu compiurer"
+          },
+          162: {
+            english: "I need a break",
+            spanish: "Necesito un descanso",
+            pronunciation: "ai niid a breik"
+          },
+          163: {
+            english: "I need your advice",
+            spanish: "Necesito tu consejo",
+            pronunciation: "ai niid ior advais"
+          },
+          164: {
+            english: "Do you need directions?",
+            spanish: "¿Necesitas indicaciones?",
+            pronunciation: "du iu niid direcshons?"
+          },
+          165: {
+            english: "Do you need help?",
+            spanish: "¿Necesitas ayuda?",
+            pronunciation: "du iu niid jelp?"
+          },
+          166: {
+            english: "Do you need more time?",
+            spanish: "¿Necesitas más tiempo?",
+            pronunciation: "du iu niid mor taim?"
+          },
+          167: {
+            english: "Do you need this book?",
+            spanish: "¿Necesitas este libro?",
+            pronunciation: "du iu niid dis buk?"
+          },
+          168: {
+            english: "Do you need to go to the doctor?",
+            spanish: "¿Necesitas ir al médico?",
+            pronunciation: "du iu niid tu gou tu de doctor?"
+          },
+          169: {
+            english: "I'm glad to see you",
+            spanish: "Me alegra verte",
+            pronunciation: "aim glad tu sii iu"
+          },
+          170: {
+            english: "I'm glad to be here",
+            spanish: "Me alegra estar aquí",
+            pronunciation: "aim glad tu bi jier"
+          },
+          171: {
+            english: "I'm glad to help",
+            spanish: "Me alegra ayudar",
+            pronunciation: "aim glad tu jelp"
+          },
+          172: {
+            english: "I'm glad to know you're okay",
+            spanish: "Me alegra saber que estás bien",
+            pronunciation: "aim glad tu nou ior okei"
+          },
+          173: {
+            english: "I'm glad to hear that",
+            spanish: "Me alegra escuchar eso",
+            pronunciation: "aim glad tu jier dat"
+          },
+          174: {
+            english: "Do you want me to help?",
+            spanish: "¿Quieres que te ayude?",
+            pronunciation: "du iu want me tu jelp?"
+          },
+          175: {
+            english: "Do you want me to call you later?",
+            spanish: "¿Quieres que te llame más tarde?",
+            pronunciation: "du iu want me tu kol iu leirer?"
+          },
+          176: {
+            english: "Do you want me to cook dinner?",
+            spanish: "¿Quieres que concine la cena?",
+            pronunciation: "du iu want me tu kuk diner?"
+          },
+          177: {
+            english: "Do you want me to go with you?",
+            spanish: "¿Quieres que vaya contigo?",
+            pronunciation: "di iu want me tu gou wid iu?"
+          },
+          178: {
+            english: "Do you want me to leave?",
+            spanish: "¿Quieres que me vaya?",
+            pronunciation: "du iu want mi tu lif?"
+          },
+          179: {
+            english: "Can you tell me the time?",
+            spanish: "¿Puedes decirme la hora?",
+            pronunciation: "ken iu tel mi de taim?"
+          },
+          180: {
+            english: "Can you tell me where the bathroom is?",
+            spanish: "¿Puedes decirme dónde está el baño?",
+            pronunciation: "ken iu tel mi uer de bazrum is?"
+          },
+          181: {
+            english: "Can you tell me your name?",
+            spanish: "¿Puedes decirme tu nombre?",
+            pronunciation: "ken iu tel mi ior neim?"
+          },
+          182: {
+            english: "Can you tell me what happened?",
+            spanish: "¿Puedes decirme qué pasó?",
+            pronunciation: "ken iu tel mi uat jappent?"
+          },
+          183: {
+            english: "Can you tell me your phone number?",
+            spanish: "¿Puedes decirme tu número de teléfono?",
+            pronunciation: "ken iu tel mi ior fon namber?"
+          },
+          184: {
+            english: "Let me see",
+            spanish: "Déjame ver",
+            pronunciation: "let mi sii"
+          },
+          185: {
+            english: "Let me help you",
+            spanish: "Déjame ayudarte",
+            pronunciation: "let mi jelp iu"
+          },
+          186: {
+            english: "Let me think",
+            spanish: "Déjame pensar",
+            pronunciation: "let mi zink"
+          },
+          187: {
+            english: "Let me explain",
+            spanish: "Déjame explicar",
+            pronunciation: "let mi explein"
+          },
+          188: {
+            english: "Let me handle this",
+            spanish: "Déjame encargarme de esto",
+            pronunciation: "let mi jandel dis"
+          },
+          189: {
+            english: "Let's go to the beach",
+            spanish: "Vamos a la playa",
+            pronunciation: "lets gou tu de bich"
+          },
+          190: {
+            english: "Let's eat out tonight",
+            spanish: "Vamos a comer fuera esta noche",
+            pronunciation: "lets it aut tunait"
+          },
+          191: {
+            english: "Let's watch a movie",
+            spanish: "Vamos a ver una película",
+            pronunciation: "lets uatch a muvi"
+          },
+          192: {
+            english: "Let's dance",
+            spanish: "Vamos a bailar",
+            pronunciation: "lets dens"
+          },
+          193: {
+            english: "Let's take a break",
+            spanish: "Vamos a tomar un descanso",
+            pronunciation: "lets teik a breik"
+          },
+          194: {
+            english: "I feel like eating pizza",
+            spanish: "Tengo ganas de comer pizza",
+            pronunciation: "ai fil laik iring pizza"
+          },
+          195: {
+            english: "I feel like dancing",
+            spanish: "Tengo ganas de bailar",
+            pronunciation: "ai fil laik densing"
+          },
+          196: {
+            english: "I feel like going to the beach",
+            spanish: "Tengo ganas de ir a la playa",
+            pronunciation: "ai fil laik gouing tu de bich"
+          },
+          197: {
+            english: "I feel like crying",
+            spanish: "Tengo ganas de llorar",
+            pronunciation: "ai fil laik craing"
+          },
+          198: {
+            english: "I feel like reading a book",
+            spanish: "Tengo ganas de leer un libro",
+            pronunciation: "ai fil laik riding a buk"
+          },
+          199: {
+            english: "You look tired",
+            spanish: "Pareces cansado",
+            pronunciation: "iu luk taierd"
+          },
+          200: {
+            english: "You look beautiful",
+            spanish: "Pareces hermosa",
+            pronunciation: "iu luk biurifol"
+          },
+          201: {
+            english: "You look happy",
+            spanish: "Pareces feliz",
+            pronunciation: "iu luk japi"
+          },
+          202: {
+            english: "You look confused",
+            spanish: "Pareces confundido",
+            pronunciation: "iu luk confiust"
+          },
+          203: {
+            english: "You look younger",
+            spanish: "Pareces más joven",
+            pronunciation: "iu luk ianger"
+          },
+          204: {
+            english: "Thank you for your help",
+            spanish: "Gracias por tu ayuda",
+            pronunciation: "zenk iu for ior jelp"
+          },
+          205: {
+            english: "Thank you for the gift",
+            spanish: "Gracias por el regalo",
+            pronunciation: "zenk iu for ior de guift"
+          },
+          206: {
+            english: "Thank you for your time",
+            spanish: "Gracias por tu tiempo",
+            pronunciation: "zenk iu for ior taim"
+          },
+          207: {
+            english: "Thank you for coming",
+            spanish: "Gracias por venir",
+            pronunciation: "zenk iu for comin"
+          },
+          208: {
+            english: "Thank you for the advice",
+            spanish: "Gracias por el consejo",
+            pronunciation: "zenk iu for di advais"
+          },
+          209: {
+            english: "I think it's going to rain",
+            spanish: "Creo que va a llover",
+            pronunciation: "ai zink its going tu rein"
+          },
+          210: {
+            english: "I think you are right",
+            spanish: "Creo que tienes razón",
+            pronunciation: "ai zink iu ar rait"
+          },
+          211: {
+            english: "I think this is the best option",
+            spanish: "Creo que esta es la mejor opción",
+            pronunciation: "ai zink dis is de best opshon"
+          },
+          212: {
+            english: "I think she's mad at me",
+            spanish: "Creo que ella está enojada conmigo",
+            pronunciation: "ai zink shis mad at mi"
+          },
+          213: {
+            english: "I think he's in love",
+            spanish: "Creo que él está enamorado",
+            pronunciation: "ai zink jis in lof"
+          },
+          214: {
+            english: "How about we go to the cinema?",
+            spanish: "¿Qué tal si vamos al cine?",
+            pronunciation: "jau abaut wi gou tu de cinema?"
+          },
+          215: {
+            english: "How about pizza for dinner?",
+            spanish: "¿Qué tal pizza para cenar?",
+            pronunciation: "jau abaut pizza for diner?"
+          },
+          216: {
+            english: "How about taking a walk?",
+            spanish: "¿Qué tal si damos un paseo?",
+            pronunciation: "jau abaut teikin a wok?"
+          },
+          217: {
+            english: "How about Saturday?",
+            spanish: "¿Qué tal el sábado?",
+            pronunciation: "jau abaut sarurei?"
+          },
+          218: {
+            english: "How about 5?",
+            spanish: "¿Qué tal a las cinco?",
+            pronunciation: "jau abaut faif?"
+          },
+          219: {
+            english: "Why are you late?",
+            spanish: "¿Por qué llegas tarde?",
+            pronunciation: "wai ar iu leit?"
+          },
+          220: {
+            english: "Why is she crying?",
+            spanish: "¿Por qué está llorando?",
+            pronunciation: "wai is shi craying?"
+          },
+          221: {
+            english: "Why did he leave?",
+            spanish: "¿Por qué se fue?",
+            pronunciation: "wai did ji lif?"
+          },
+          222: {
+            english: "Why can't I go?",
+            spanish: "¿Por qué no puedo ir?",
+            pronunciation: "wai kent ai gou?"
+          },
+          223: {
+            english: "Why did you do that?",
+            spanish: "¿Por qué hiciste eso?",
+            pronunciation: "wai did iu du dat?"
+          },
+          224: {
+            english: "I hope you feel better soon",
+            spanish: "Espero que te sientas mejor pronto",
+            pronunciation: "ai joup iu fiil berer sun"
+          },
+          225: {
+            english: "I hope you enjoy your trip",
+            spanish: "Espero que disfrutes tu viaje",
+            pronunciation: "ai joup you enyoi ior trip"
+          },
+          226: {
+            english: "I hope you have a great day",
+            spanish: "Espero que tengas un gran día",
+            pronunciation: "ai joup iu jaf a greit dei"
+          },
+          227: {
+            english: "I hope she calls",
+            spanish: "Espero que ella llame",
+            pronunciation: "ai joup shi kols"
+          },
+          228: {
+            english: "I hope it doesn't rain",
+            spanish: "Espero que no llueva",
+            pronunciation: "ai joup it dasent rein"
+          },
+          229: {
+            english: "I'm sure it will be fine",
+            spanish: "Estoy seguro de que estará bien",
+            pronunciation: "aim shur it will be fain"
+          },
+          230: {
+            english: "I'm sure she's coming",
+            spanish: "Estoy seguro de que viene",
+            pronunciation: "aim shur shis coming"
+          },
+          231: {
+            english: "I'm sure he didn't mean it",
+            spanish: "Estoy seguro de que no lo decía en serio",
+            pronunciation: "aim shur ji dident min it"
+          },
+          232: {
+            english: "I'm sure you can do it",
+            spanish: "Estoy seguro de que puedes hacerlo",
+            pronunciation: "aim shur iu kan du it"
+          },
+          233: {
+            english: "I'm sure they'll love the gift",
+            spanish: "Estoy seguro de que les gustará el regalo",
+            pronunciation: "aim shur deill lof de gift"
+          },
+          234: {
+            english: "Do you know the way to the station?",
+            spanish: "¿Sabes el camino a la estación?",
+            pronunciation: "du iu nou de wei tu de steishon?"
+          },
+          235: {
+            english: "Do you know when the train leaves?",
+            spanish: "¿Sabes cuándo sale el tren?",
+            pronunciation: "du iu nou uen de trein lifs?"
+          },
+          236: {
+            english: "Do you know how to cook this dish?",
+            spanish: "¿Sabes cómo cocinar este plato?",
+            pronunciation: "du iu nou jau tu kuk dis dish?"
+          },
+          237: {
+            english: "Do you know the answer?",
+            spanish: "¿Sabes la respuesta?",
+            pronunciation: "du iu nou di anser?"
+          },
+          238: {
+            english: "Do you know where my keys are?",
+            spanish: "¿Sabes dónde están mis llaves?",
+            pronunciation: "du iu nou uer mai kis ar?"
+          },
+          239: {
+            english: "I have to go now",
+            spanish: "Tengo que irme ahora",
+            pronunciation: "ai jaf tu gou nau"
+          },
+          240: {
+            english: "I have to finish my homework",
+            spanish: "Tengo que terminar mi tarea",
+            pronunciation: "ai jaf tu finish mai jomwork"
+          },
+          241: {
+            english: "I have to call my mom",
+            spanish: "Tengo que llamar a mi mamá",
+            pronunciation: "ai jaf tu kol mai mom"
+          },
+          242: {
+            english: "I have to buy some groceries",
+            spanish: "Tengo que comprar algunos víveres",
+            pronunciation: "ai jaf tu bai som grouseris"
+          },
+          243: {
+            english: "I have to wake up early tomorrow",
+            spanish: "Tengo que despertar temprano mañana",
+            pronunciation: "ai jaf tu weik ap erli tumorrou"
+          },
+          244: {
+            english: "You don't have to explain",
+            spanish: "No tienes que explicar",
+            pronunciation: "iu dont jaf tu explein"
+          },
+          245: {
+            english: "You don't have to come if you don't want to",
+            spanish: "No tienes que venir si no quieres",
+            pronunciation: "iu dont jaf tu kom if iu dont want tu"
+          },
+          246: {
+            english: "You don't have to pay me back",
+            spanish: "No tienes que devolverme el dinero",
+            pronunciation: "iu dont jaf tu pei mi bak"
+          },
+          247: {
+            english: "You don't have to worry about it",
+            spanish: "No tienes que preocuparte por eso",
+            pronunciation: "iu dont jaf tu wori abaut it"
+          },
+          248: {
+            english: "You don't have to bring anything",
+            spanish: "No tienes que traer nada",
+            pronunciation: "iu dont jaf tu bring enizing"
+          },
+          249: {
+            english: "You must be joking",
+            spanish: "Debes estar bromeando",
+            pronunciation: "iu mast bi youking"
+          },
+          250: {
+            english: "You must be proud of your achievements",
+            spanish: "Debes estar orgulloso de tus logros",
+            pronunciation: "iu mast bi praund of ior achifment"
+          },
+          251: {
+            english: "You must be very busy these days",
+            spanish: "Debes estar muy ocupado estos días",
+            pronunciation: "iu mast bi veri bisi dis deis"
+          },
+          252: {
+            english: "You must be hungry",
+            spanish: "Debes estar hambriento",
+            pronunciation: "iu mas bi jangri"
+          },
+          253: {
+            english: "You must be mistaken",
+            spanish: "Debes estar equivocado",
+            pronunciation: "iu mas bi misteiken"
+          },
+          254: {
+            english: "I used to live in New York",
+            spanish: "Solía vivir en Nueva York",
+            pronunciation: "ai uis tu lif in niu york"
+          },
+          255: {
+            english: "She used to dance ballet",
+            spanish: "Ella solía bailar ballet",
+            pronunciation: "shi ius tu dens balet"
+          },
+          256: {
+            english: "They used to be best friends",
+            spanish: "Ellos solían ser mejores amigos",
+            pronunciation: "dei ius tu bi best frens"
+          },
+          257: {
+            english: "He used to hate vegetables",
+            spanish: "El solía odiar las verduras",
+            pronunciation: "ji ius tu jeit veyetabols"
+          },
+          258: {
+            english: "I used to play the piano",
+            spanish: "Solía tocar el piano",
+            pronunciation: "ai ius tu plei de piano"
+          },
+          259: {
+            english: "How come you're not going to the party?",
+            spanish: "¿Cómo es que no vas a la fiesta?",
+            pronunciation: "jau kom ior not goign tu de pari?"
+          },
+          260: {
+            english: "How come she didn't call?",
+            spanish: "¿Cómo es que ella no llamó?",
+            pronunciation: "jau kom shi dident kol?"
+          },
+          261: {
+            english: "How come they're late?",
+            spanish: "¿Cómo es que están tarde?",
+            pronunciation: "jau kom deir leit?"
+          },
+          262: {
+            english: "How come you didn't tell me?",
+            spanish: "¿Cómo es que no me dijiste?",
+            pronunciation: "jau kom iu dident tel mi?"
+          },
+          263: {
+            english: "How come he knows that secret?",
+            spanish: "¿Cómo es que él sabe ese secreto?",
+            pronunciation: "jau kom ji nous dat sicret?"
+          },
+          264: {
+            english: "How was your day?",
+            spanish: "¿Cómo fue tu día?",
+            pronunciation: "jau wos ior dei?"
+          },
+          265: {
+            english: "How was the movie?",
+            spanish: "¿Cómo fue la película?",
+            pronunciation: "jau wos de muvi?"
+          },
+          266: {
+            english: "How was the concert?",
+            spanish: "¿Cómo fue el concierto?",
+            pronunciation: "jau wos de concert?"
+          },
+          267: {
+            english: "How was your trip?",
+            spanish: "¿Cómo fue tu viaje?",
+            pronunciation: "jau wos ior trip?"
+          },
+          268: {
+            english: "How was your meeting?",
+            spanish: "¿Cómo fue tu reunión?",
+            pronunciation: "jau wos ior miring?"
+          },
+          269: {
+            english: "Do you mind if I join you?",
+            spanish: "¿Te importa si me uno a ti?",
+            pronunciation: "du iu maind if ai yoin iu?"
+          },
+          270: {
+            english: "Do you mind if I open the window?",
+            spanish: "¿Te importa si abro la ventana?",
+            pronunciation: "du iu maind if ai open de window?"
+          },
+          271: {
+            english: "Do you mind if I take this seat?",
+            spanish: "¿Te importa si tomo este asiento?",
+            pronunciation: "du iu main if ai teik dis sit?"
+          },
+          272: {
+            english: "Do you mind if I change the channel?",
+            spanish: "¿Te importa si cambio el canal?",
+            pronunciation: "du iu maind if ai cheinch de chanel?"
+          },
+          273: {
+            english: "Do you mind if I call you later?",
+            spanish: "¿Te importa si te llamo más tarde?",
+            pronunciation: "du iu maind if ai kol iu leirer?"
+          },
+          274: {
+            english: "I've never been to Europe",
+            spanish: "Nunca he estado en Europa",
+            pronunciation: "aif never bin tu iurop"
+          },
+          275: {
+            english: "I've never eaten sushi",
+            spanish: "Nunca he comido sushi",
+            pronunciation: "aif never iten sushi"
+          },
+          276: {
+            english: "I've never seen that movie",
+            spanish: "Nunca he visto esa película",
+            pronunciation: "aif never siin dat muvi"
+          },
+          277: {
+            english: "I've never met her",
+            spanish: "Nunca la he conocido",
+            pronunciation: "aif never met jer"
+          },
+          278: {
+            english: "I've never tried skiing",
+            spanish: "Nunca he intentado esquiar",
+            pronunciation: "aif never tried skiing"
+          },
+          279: {
+            english: "Maybe I'll go to the park later",
+            spanish: "Quizás vaya al parque más tarde",
+            pronunciation: "meibi aill gou tu de park leirer"
+          },
+          280: {
+            english: "Maybe it's a good idea",
+            spanish: "Quizás sea una buena idea",
+            pronunciation: "meibi its a gud aidia"
+          },
+          281: {
+            english: "Maybe she forgot to call",
+            spanish: "Quizás olvidó llamar",
+            pronunciation: "meibi shi forgot tu kol"
+          },
+          282: {
+            english: "Maybe I'm wrong",
+            spanish: "Quizás me equivoque",
+            pronunciation: "meibi aim rong"
+          },
+          283: {
+            english: "Maybe it's too late",
+            spanish: "Quizás sea demasiado tarde",
+            pronunciation: "meibi its tuu leit"
+          },
+          284: {
+            english: "Yes",
+            spanish: "Si",
+            pronunciation: "ies"
+          },
+          285: {
+            english: "No",
+            spanish: "No",
+            pronunciation: "no"
+          },
+          286: {
+            english: "Please",
+            spanish: "Por Favor",
+            pronunciation: "Plis"
+          },
+          287: {
+            english: "Hello",
+            spanish: "Hola",
+            pronunciation: "Jelou"
+          },
+          288: {
+            english: "Good morning",
+            spanish: "Buenos días",
+            pronunciation: "Guud morning"
+          },
+          289: {
+            english: "Good afternoon",
+            spanish: "Buenas tardes",
+            pronunciation: "Guud after-nuun"
+          },
+          290: {
+            english: "Good night",
+            spanish: "Buenas noches",
+            pronunciation: "Guud nait"
+          },
+          291: {
+            english: "Good bye",
+            spanish: "Adiós",
+            pronunciation: "Guud bai"
+          },
+          292: {
+            english: "See you later",
+            spanish: "Hasta luego",
+            pronunciation: "Si iu leiter"
+          },
+          293: {
+            english: "That's all right",
+            spanish: "Está bien",
+            pronunciation: "Dats ol rait"
+          },
+          294: {
+            english: "I am sorry",
+            spanish: "Lo siento",
+            pronunciation: "Ai am sorri"
+          },
+          295: {
+            english: "Excuse me",
+            spanish: "Perdóname",
+            pronunciation: "Exkius mi"
+          },
+          296: {
+            english: "Mr",
+            spanish: "Señor",
+            pronunciation: "Mister"
+          },
+          297: {
+            english: "Mrs",
+            spanish: "Señora",
+            pronunciation: "Misis"
+          },
+          298: {
+            english: "Miss",
+            spanish: "Señorita",
+            pronunciation: "Mis"
+          },
+          299: {
+            english: "How are you?",
+            spanish: "¿Cómo está usted?",
+            pronunciation: "Jau ar iu?"
+          },
+          300: {
+            english: "Very well, thanks",
+            spanish: "Muy bien, gracias",
+            pronunciation: "Veri uel zanks"
+          },
+          301: {
+            english: "I am",
+            spanish: "Yo soy",
+            pronunciation: "Ai am"
+          },
+          302: {
+            english: "I am",
+            spanish: "Yo estoy",
+            pronunciation: "Ai am"
+          },
+          303: {
+            english: "I have",
+            spanish: "Yo tengo",
+            pronunciation: "Ai jav"
+          },
+          304: {
+            english: "It is",
+            spanish: "Es",
+            pronunciation: "It is"
+          },
+          305: {
+            english: "It is",
+            spanish: "Está",
+            pronunciation: "It is"
+          },
+          306: {
+            english: "It is here",
+            spanish: "Está aquí",
+            pronunciation: "It is jíer"
+          },
+          307: {
+            english: "It is there",
+            spanish: "Está allá",
+            pronunciation: "It is der"
+          },
+          308: {
+            english: "This one",
+            spanish: "Este",
+            pronunciation: "Dis uan"
+          },
+          309: {
+            english: "I would like",
+            spanish: "Me gustaría",
+            pronunciation: "Ai would laik"
+          },
+          310: {
+            english: "It is good",
+            spanish: "Es bueno",
+            pronunciation: "It is guud"
+          },
+          311: {
+            english: "It is bad",
+            spanish: "Es Malo",
+            pronunciation: "It is bad"
+          },
+          312: {
+            english: "It is important",
+            spanish: "Es importante",
+            pronunciation: "It is important"
+          },
+          313: {
+            english: "That's it",
+            spanish: "Eso es",
+            pronunciation: "Dats it"
+          },
+          314: {
+            english: "I love you",
+            spanish: "Te quiero",
+            pronunciation: "Ai lav iu"
+          },
+          315: {
+            english: "I got it",
+            spanish: "Lo logré",
+            pronunciation: "Ai got it"
+          },
+          316: {
+            english: "I am happy",
+            spanish: "Estoy contento",
+            pronunciation: "Ai am japi"
+          },
+          317: {
+            english: "I am tired",
+            spanish: "Estoy cansado",
+            pronunciation: "Ai am taiard"
+          },
+          318: {
+            english: "I am busy",
+            spanish: "Estoy Ocupado",
+            pronunciation: "Ai am bisi"
+          },
+          319: {
+            english: "It is ready",
+            spanish: "Está listo",
+            pronunciation: "It is redi"
+          },
+          320: {
+            english: "Once",
+            spanish: "Una vez",
+            pronunciation: "uans"
+          },
+          321: {
+            english: "Many times",
+            spanish: "Muchas veces",
+            pronunciation: "Meni taims"
+          },
+          322: {
+            english: "Sometimes",
+            spanish: "Unas veces",
+            pronunciation: "Som-taims"
+          },
+          323: {
+            english: "Again",
+            spanish: "Otra vez",
+            pronunciation: "Aguein"
+          },
+          324: {
+            english: "Maybe",
+            spanish: "Tal vez",
+            pronunciation: "Mei-be"
+          },
+          325: {
+            english: "This time",
+            spanish: "Esta vez",
+            pronunciation: "Dis taim"
+          },
+          326: {
+            english: "Everything",
+            spanish: "Todo",
+            pronunciation: "Evri-zing"
+          },
+          327: {
+            english: "That's all",
+            spanish: "Es todo",
+            pronunciation: "Das ol"
+          },
+          328: {
+            english: "Nothing",
+            spanish: "Nada",
+            pronunciation: "No zing"
+          },
+          329: {
+            english: "Never",
+            spanish: "Nunca",
+            pronunciation: "Never"
+          },
+          330: {
+            english: "What do you need?",
+            spanish: "¿Que necesita?",
+            pronunciation: "Uat du iu niid?"
+          },
+          331: {
+            english: "I think so",
+            spanish: "Creo que sí",
+            pronunciation: "Ai zink so"
+          },
+          332: {
+            english: "I hope so",
+            spanish: "Espero que sí",
+            pronunciation: "Ai joup so"
+          },
+          333: {
+            english: "Glad to meet you",
+            spanish: "Encantado de conocerle",
+            pronunciation: "Glad tu mit iu"
+          },
+          334: {
+            english: "How do you feel?",
+            spanish: "¿Cómo se siente?",
+            pronunciation: "Jau du iu fil?"
+          },
+          335: {
+            english: "Do you mind?",
+            spanish: "¿Me permite?",
+            pronunciation: "Du iu maind?"
+          },
+          336: {
+            english: "Sure",
+            spanish: "Seguro",
+            pronunciation: "Chuer"
+          },
+          337: {
+            english: "Give them my regards",
+            spanish: "Dele mis saludos",
+            pronunciation: "Giv dem mai rigards"
+          },
+          338: {
+            english: "How do you do?",
+            spanish: "¿Como esta?",
+            pronunciation: "Jau du iu du?"
+          },
+          339: {
+            english: "I apologize",
+            spanish: "Disculpe",
+            pronunciation: "Ai apoloyais"
+          },
+          340: {
+            english: "See you later",
+            spanish: "Te veré después",
+            pronunciation: "Si iu leiter"
+          },
+          341: {
+            english: "I am very grateful",
+            spanish: "Estoy muy agradecido",
+            pronunciation: "Ai am veri greitful"
+          },
+          342: {
+            english: "So long",
+            spanish: "Hasta luego",
+            pronunciation: "So long"
+          },
+          343: {
+            english: "How much?",
+            spanish: "¿Cuánto?",
+            pronunciation: "Jau mach?"
+          },
+          344: {
+            english: "Why?",
+            spanish: "¿Por qué?",
+            pronunciation: "Jaui?"
+          },
+          345: {
+            english: "Which one?",
+            spanish: "¿Cuál?",
+            pronunciation: "Uich uan?"
+          },
+          346: {
+            english: "Where is?",
+            spanish: "¿Dónde está?",
+            pronunciation: "Juer is?"
+          },
+          347: {
+            english: "When?",
+            spanish: "¿Cuándo?",
+            pronunciation: "Juen?"
+          },
+          348: {
+            english: "Do you have?",
+            spanish: "¿Tiene usted?",
+            pronunciation: "Du iu jav?"
+          },
+          349: {
+            english: "How?",
+            spanish: "¿Cómo?",
+            pronunciation: "Jau?"
+          },
+          350: {
+            english: "What?",
+            spanish: "¿Qué?",
+            pronunciation: "Juat?"
+          },
+          351: {
+            english: "My name is…",
+            spanish: "Mi nombre es…",
+            pronunciation: "Mai neim is…"
+          },
+          352: {
+            english: "My address is…",
+            spanish: "Mi dirección es…",
+            pronunciation: "Mai adres is…"
+          },
+          353: {
+            english: "This is my name and my address",
+            spanish: "Este es mi nombre y mi dirección",
+            pronunciation: "Dis is mai neim and mai adres"
+          },
+          354: {
+            english: "I do not understand",
+            spanish: "No entiendo",
+            pronunciation: "Ai du not ander-stand"
+          },
+          355: {
+            english: "Please, speak more slowly",
+            spanish: "Por favor, hable más despacio",
+            pronunciation: "Plis, spik mor slouli"
+          },
+          356: {
+            english: "What does that mean?",
+            spanish: "¿Qué quiere decir?",
+            pronunciation: "Uat das dat min?"
+          },
+          357: {
+            english: "Do you speak Spanish?",
+            spanish: "¿Habla usted español?",
+            pronunciation: "Du iu spik spanich"
+          },
+          358: {
+            english: "I do not speak English",
+            spanish: "No hablo inglés",
+            pronunciation: "Ai du not spik inglich"
+          },
+          359: {
+            english: "Try to understand me",
+            spanish: "Trate de comprenderme",
+            pronunciation: "Trai tu anders-stand mi"
+          },
+          360: {
+            english: "I speak a little English",
+            spanish: "Hablo poco inglés",
+            pronunciation: "Ai spik ei litl inglich"
+          },
+          361: {
+            english: "Help!",
+            spanish: "¡Socorro!",
+            pronunciation: "Jelp!"
+          },
+          362: {
+            english: "Help me!",
+            spanish: "Ayúdeme",
+            pronunciation: "Jelp mi!"
+          },
+          363: {
+            english: "Fire",
+            spanish: "Fuego",
+            pronunciation: "Faiar"
+          },
+          364: {
+            english: "Danger!",
+            spanish: "Peligro",
+            pronunciation: "Danyer!"
+          },
+          365: {
+            english: "Warning / Careful",
+            spanish: "Cuidado",
+            pronunciation: "Uarning / kerful"
+          },
+          366: {
+            english: "Call an ambulance!",
+            spanish: "¡Llama una ambulancia!",
+            pronunciation: "Col an ambiulans!"
+          },
+          367: {
+            english: "This is an emergency",
+            spanish: "Esta es una emergencia",
+            pronunciation: "Dis is an emeryenci!"
+          },
+          368: {
+            english: "I am lost",
+            spanish: "Estoy perdido",
+            pronunciation: "Ai am lost"
+          },
+          369: {
+            english: "I am being chased",
+            spanish: "Me persiguen",
+            pronunciation: "Ai am bi-in cheisd"
+          },
+          370: {
+            english: "I have lost my money",
+            spanish: "He perdido mi dinero",
+            pronunciation: "Ai jav lost mai mani"
+          },
+          371: {
+            english: "I had an accident",
+            spanish: "Tuve un accidente",
+            pronunciation: "Ai jad an akcident"
+          },
+          372: {
+            english: "My car is broken",
+            spanish: "Mi automóvil está dañado",
+            pronunciation: "Mai car is brouken"
+          },
+          373: {
+            english: "Call the police",
+            spanish: "Llame a la policía",
+            pronunciation: "Col di polis"
+          },
+          374: {
+            english: "I have been robbed",
+            spanish: "Me han robado",
+            pronunciation: "Ai jav bin robd"
+          },
+          375: {
+            english: "Be careful!",
+            spanish: "¡Tenga cuidado!",
+            pronunciation: "Bi kerful!"
+          },
+          376: {
+            english: "I will get you",
+            spanish: "Te agarraré!",
+            pronunciation: "Ai uil guet iu!"
+          },
+          377: {
+            english: "Self defense",
+            spanish: "Defensa propia",
+            pronunciation: "Self-difens"
+          },
+          378: {
+            english: "Get out of here!",
+            spanish: "Lárguese de aquí!",
+            pronunciation: "Guet aut of jier!"
+          },
+          379: {
+            english: "I am looking for a job",
+            spanish: "Estoy buscando empleo",
+            pronunciation: "Ai am luking for ei yob"
+          },
+          380: {
+            english: "I need work",
+            spanish: "Necesito trabajar",
+            pronunciation: "Ai niid tu uork"
+          },
+          381: {
+            english: "Help wanted",
+            spanish: "Se solicita empleado",
+            pronunciation: "Jelp uanted"
+          },
+          382: {
+            english: "I would like an appointment",
+            spanish: "Desearía tener una entrevista",
+            pronunciation: "I would laik tu jav an apoitment"
+          },
+          383: {
+            english: "All I want is to work",
+            spanish: "Todo lo que quiero es trabajar",
+            pronunciation: "Ol ai uant is tu uork"
+          },
+          384: {
+            english: "I have experience in this work",
+            spanish: "Tengo experiencia en este trabajo",
+            pronunciation: "Ai jav expiriens in dis uork"
+          },
+          385: {
+            english: "Who is my supervisor?",
+            spanish: "¿Quién es mi supervisor?",
+            pronunciation: "Juu is mai supervaisor?"
+          },
+          386: {
+            english: "I did not know",
+            spanish: "No lo sabía",
+            pronunciation: "Ai did not nou"
+          },
+          387: {
+            english: "How much will I make?",
+            spanish: "¿Cuánto ganaré?",
+            pronunciation: "Jau much uil ai meik?"
+          },
+          388: {
+            english: "I want to be sure",
+            spanish: "Quiero estar seguro",
+            pronunciation: "Ai uant tu bi chuer"
+          },
+          389: {
+            english: "This is my social security number",
+            spanish: "Este es mi número del seguro social",
+            pronunciation: "Di is mai social sekiuriti namber"
+          },
+          390: {
+            english: "I can work overtime",
+            spanish: "Puedo trabajar tiempo extra",
+            pronunciation: "Ai can uork over-taim"
+          },
+          391: {
+            english: "I have not been paid",
+            spanish: "No me han pagado",
+            pronunciation: "Ai jav no bin peid"
+          },
+          392: {
+            english: "I need to leave early, could it be possible?",
+            spanish: "Necesito salir temprano ¿Puede ser posible?",
+            pronunciation: "Ai niid tu liv erli, cud it bi posibl?"
+          },
+          393: {
+            english: "I am sorry I am late",
+            spanish: "Siento haber llegado tarde",
+            pronunciation: "Ai am sorri ai am leit"
+          },
+          394: {
+            english: "Can I help you in your work?",
+            spanish: "¿Te puedo ayudar en tu trabajo?",
+            pronunciation: "Can ai jelp iu in iuor uork?"
+          },
+          395: {
+            english: "Put it in writing",
+            spanish: "Póngalo por escrito",
+            pronunciation: "Put it in raiting"
+          },
+          396: {
+            english: "I did not know",
+            spanish: "No lo sabía",
+            pronunciation: "Ai diid not nou"
+          },
+          397: {
+            english: "I can work nights and weekends",
+            spanish: "Puedo trabajar noches y fines de semana",
+            pronunciation: "Ai can uork naitz and uik-ends"
+          },
+          398: {
+            english: "Recently, I worked at a…",
+            spanish: "Recientemente trabaje en una…",
+            pronunciation: "Ri-centli, ai uorked at ei…"
+          },
+          399: {
+            english: "Can you help me?",
+            spanish: "¿Puedes ayudarme?",
+            pronunciation: "ken iu jelp mi"
+          },
+          400: {
+            english: "I am very busy",
+            spanish: "Estoy muy ocupado",
+            pronunciation: "ai am veri bisi"
+          },
+          401: {
+            english: "I like your shirt",
+            spanish: "Me gusta tu camisa",
+            pronunciation: "ai laik iur shert"
+          },
+          402: {
+            english: "It is a good idea",
+            spanish: "Es una buena idea",
+            pronunciation: "et es a gud aidia"
+          },
+          403: {
+            english: "I will try",
+            spanish: "Lo intentaré",
+            pronunciation: "ai uil trai"
+          },
+          404: {
+            english: "See you tomorrow",
+            spanish: "Te veo mañana",
+            pronunciation: "si iu tumorou"
+          },
+          405: {
+            english: "Can I use your phone",
+            spanish: "¿Puedo usar tu teléfono?",
+            pronunciation: "ken ai ius iur fon"
+          },
+          406: {
+            english: "I have a question",
+            spanish: "Tengo una pregunta",
+            pronunciation: "ai jav a kuestion"
+          },
+          407: {
+            english: "This is interesting",
+            spanish: "Esto es interesante",
+            pronunciation: "dis es interstin"
+          },
+          408: {
+            english: "I need to practice more",
+            spanish: "Necesito practicar más",
+            pronunciation: "ai nid tu praktis mor"
+          },
+          409: {
+            english: "What time does it start?",
+            spanish: "¿A qué hora empieza?",
+            pronunciation: "uat taim dos et estart"
+          },
+          410: {
+            english: "I have to go",
+            spanish: "Tengo que irme",
+            pronunciation: "ai jav tu go"
+          },
+          411: {
+            english: "What do you recommend?",
+            spanish: "¿Qué recomiendas?",
+            pronunciation: "uat du iu ricomend"
+          },
+          412: {
+            english: "I can't wait",
+            spanish: "No puedo esperar",
+            pronunciation: "ai kent ueit"
+          },
+          413: {
+            english: "I feel better",
+            spanish: "Me siento mejor",
+            pronunciation: "ai fil berer"
+          },
+          414: {
+            english: "I need a doctor",
+            spanish: "Necesito un médico",
+            pronunciation: "ai nid a doctor"
+          },
+          415: {
+            english: "It is cold outside",
+            spanish: "Hace frío afuera",
+            pronunciation: "iris cold autsaid"
+          },
+          416: {
+            english: "I am excited",
+            spanish: "Estoy emocionado",
+            pronunciation: "ai am exaired"
+          },
+          417: {
+            english: "Do you have siblings?",
+            spanish: "¿Tienes hermanos?",
+            pronunciation: "du iu jav siblings"
+          },
+          418: {
+            english: "I have a headache",
+            spanish: "Me duele la cabeza",
+            pronunciation: "ai jav a jedek"
+          },
+          419: {
+            english: "Where were you born?",
+            spanish: "¿Dónde naciste?",
+            pronunciation: "uer uer iu born"
+          },
+          420: {
+            english: "I do not feel well",
+            spanish: "No me siento bien",
+            pronunciation: "ai du not fil uel"
+          },
+          421: {
+            english: "I have no idea",
+            spanish: "No tengo ni idea",
+            pronunciation: "ai jav no aidia"
+          },
+          422: {
+            english: "I don't understand anything",
+            spanish: "No entiendo nada",
+            pronunciation: "ai dont onderstend enidin"
+          },
+          423: {
+            english: "I'm happy to see you",
+            spanish: "Estoy feliz de verte",
+            pronunciation: "aim japi tu si iu"
+          },
+          424: {
+            english: "Can you give me some advice?",
+            spanish: "¿Puedes darme un consejo?",
+            pronunciation: "ken iu giv mi som advais"
+          },
+          425: {
+            english: "Let me think about it",
+            spanish: "Déjame pensarlo",
+            pronunciation: "let mi dink abaut et"
+          },
+          426: {
+            english: "That's for sure",
+            spanish: "Eso es seguro",
+            pronunciation: "dats for shur"
+          },
+          427: {
+            english: "From now on",
+            spanish: "De ahora en adelante",
+            pronunciation: "from nao on"
+          },
+          428: {
+            english: "Be careful",
+            spanish: "Ten cuidado",
+            pronunciation: "bi kerful"
+          },
+          429: {
+            english: "You're right",
+            spanish: "Tienes razón",
+            pronunciation: "iur raigt"
+          },
+          430: {
+            english: "Good news",
+            spanish: "Buenas noticias",
+            pronunciation: "gud nius"
+          },
+          431: {
+            english: "If you say so",
+            spanish: "Si tú lo dices",
+            pronunciation: "if iu sei so"
+          },
+          432: {
+            english: "I can do it",
+            spanish: "Puedo hacerlo",
+            pronunciation: "ai ken du et"
+          },
+          433: {
+            english: "Wait for me",
+            spanish: "Espérame",
+            pronunciation: "ueit for mi"
+          },
+          434: {
+            english: "I promise",
+            spanish: "Lo prometo",
+            pronunciation: "ai promis"
+          },
+          435: {
+            english: "Too late",
+            spanish: "Demasiado tarde",
+            pronunciation: "tu leit"
+          },
+          436: {
+            english: "Good job",
+            spanish: "Buen trabajo",
+            pronunciation: "gud yob"
+          },
+          437: {
+            english: "You can't miss it",
+            spanish: "No puedes perdértelo",
+            pronunciation: "iu kent mes et"
+          },
+          438: {
+            english: "No hurry",
+            spanish: "No hay prisa",
+            pronunciation: "no juri"
+          },
+          439: {
+            english: "Where can I park?",
+            spanish: "¿Dónde puedo estacionarme?",
+            pronunciation: "uer ken ai park"
+          },
+          440: {
+            english: "I can't wait",
+            spanish: "No puedo esperar",
+            pronunciation: "ai kent ueit"
+          },
+          441: {
+            english: "I agree to the plan",
+            spanish: "Estoy de acuerdo con el plan",
+            pronunciation: "ai agri tu da plan"
+          },
+          442: {
+            english: "I have a meeting",
+            spanish: "Tengo una reunión",
+            pronunciation: "ai jav a mirin"
+          },
+          443: {
+            english: "This can't be happening",
+            spanish: "Esto no puede estar pasando",
+            pronunciation: "dis kent bi japenin"
+          },
+          444: {
+            english: "Better than expected",
+            spanish: "Mejor de lo esperado",
+            pronunciation: "berer dan expekted"
+          },
+          445: {
+            english: "That's a great idea",
+            spanish: "Esa es una gran idea",
+            pronunciation: "dats a greit aidia"
+          },
+          446: {
+            english: "I have no idea",
+            spanish: "No tengo idea",
+            pronunciation: "ai jav no aidia"
+          },
+          447: {
+            english: "So far so good",
+            spanish: "Por ahora todo bien",
+            pronunciation: "so far so gud"
+          },
+          448: {
+            english: "It's a pleasure to meet you",
+            spanish: "Es un placer conocerte",
+            pronunciation: "ets a pleishur tu mit iu"
+          },
+          449: {
+            english: "I can't wait to see you",
+            spanish: "No puedo esperar para verte",
+            pronunciation: "ai kent ueit tu si iu"
+          },
+          450: {
+            english: "God bless you",
+            spanish: "Que Dios te bendiga",
+            pronunciation: "gad bles iu"
+          },
+          451: {
+            english: "Better safe than sorry",
+            spanish: "Más vale prevenir que lamentar",
+            pronunciation: "berer seif dan sori"
+          },
+          452: {
+            english: "Hello, how are you?",
+            spanish: "Hola, ¿cómo estás?",
+            pronunciation: "jelou, jau ar yu?"
+          },
+          453: {
+            english: "What is your name?",
+            spanish: "¿Cómo te llamas?",
+            pronunciation: "uat is yor neim?"
+          },
+          454: {
+            english: "I am a student",
+            spanish: "Soy estudiante",
+            pronunciation: "ai am a stiudent"
+          },
+          455: {
+            english: "Where is the bathroom?",
+            spanish: "¿Dónde está el baño?",
+            pronunciation: "uer is de bafroom?"
+          },
+          456: {
+            english: "How much does it cost?",
+            spanish: "¿Cuánto cuesta?",
+            pronunciation: "jau mach das it kost?"
+          },
+          457: {
+            english: "Can you help me?",
+            spanish: "¿Puede ayudarme?",
+            pronunciation: "ken yu jelp mi?"
+          },
+          458: {
+            english: "I like to eat",
+            spanish: "Me gusta comer",
+            pronunciation: "ai laik tu it"
+          },
+          459: {
+            english: "What time is it?",
+            spanish: "¿Qué hora es?",
+            pronunciation: "uat taim is it?"
+          },
+          460: {
+            english: "I love my family",
+            spanish: "Quiero a mi familia",
+            pronunciation: "ai lov mai famili"
+          },
+          461: {
+            english: "This is my friend",
+            spanish: "Este es mi amigo",
+            pronunciation: "dis is mai frend"
+          },
+          462: {
+            english: "Where do you live?",
+            spanish: "¿Dónde vive?",
+            pronunciation: "uer du yu liv?"
+          },
+          463: {
+            english: "I have a cat",
+            spanish: "Tengo un gato",
+            pronunciation: "ai jav a kat"
+          },
+          464: {
+            english: "What is your favorite color?",
+            spanish: "¿Cuál es su color favorito?",
+            pronunciation: "uat is yor feivorit kolor?"
+          },
+          465: {
+            english: "She is a teacher",
+            spanish: "Es profesora",
+            pronunciation: "shi is a ticher"
+          },
+          466: {
+            english: "Do you speak English?",
+            spanish: "¿Habla inglés?",
+            pronunciation: "du yu spik inglish?"
+          },
+          467: {
+            english: "It's a beautiful day",
+            spanish: "Hace un día precioso",
+            pronunciation: "its a biutiful dei"
+          },
+          468: {
+            english: "I want to learn",
+            spanish: "Quiero aprender",
+            pronunciation: "ai want tu lern"
+          },
+          469: {
+            english: "How are you feeling?",
+            spanish: "¿Cómo se encuentra?",
+            pronunciation: "jau ar yu filin?"
+          },
+          470: {
+            english: "Where is the library?",
+            spanish: "¿Dónde está la bilbioteca?",
+            pronunciation: "uer is de laibrari?"
+          },
+          471: {
+            english: "Can you repeat that?",
+            spanish: "¿Puede repetirlo?",
+            pronunciation: "ken yu ripit dat?"
+          },
+          472: {
+            english: "He is my brother",
+            spanish: "Es mi hermano",
+            pronunciation: "ji is mai brader"
+          },
+          473: {
+            english: "I need some water",
+            spanish: "Necesito algo de agua",
+            pronunciation: "ai nid sam woter"
+          },
+          474: {
+            english: "I'm from the United States",
+            spanish: "Soy de Estados Unidos",
+            pronunciation: "aim from de yu unait steis"
+          },
+          475: {
+            english: "What's your favorite food?",
+            spanish: "¿Cuál es su comida favorita?",
+            pronunciation: "uats yor feivorit fud?"
+          },
+          476: {
+            english: "I like to read",
+            spanish: "Me gusta leer",
+            pronunciation: "ai laik tu rid"
+          },
+          477: {
+            english: "Where is the nearest hospital?",
+            spanish: "¿Dónde está el hospital más cercano?",
+            pronunciation: "uer is de nierest jospital?"
+          },
+          478: {
+            english: "I'm a beginner",
+            spanish: "Soy principiante",
+            pronunciation: "aim a biguiner"
+          },
+          479: {
+            english: "Can you show me the way?",
+            spanish: "¿Puedes mostrarme el camino?",
+            pronunciation: "ken yu sho mi de weit?"
+          }                                                                                                                                                                                                        
+    };
+    
+    // Sistema de síntesis de voz mejorado
+    async function speak(text) {
+        const voiceType = document.getElementById('voice-select').value;
+        const voice = VOICES[voiceType];
+        const speed = document.getElementById('speed-control').value;
+        const clarity = document.getElementById('clarity-control').value;
+    
+        try {
+            document.getElementById('loading-indicator').classList.add('active');
+            document.getElementById('play-btn').disabled = true;
+    
+            // Construir SSML para mayor control y naturalidad
+            const ssml = `
+                <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
+                    <voice name="${voice.name}">
+                        <mstts:express-as style="${voice.style}" styledegree="${clarity}">
+                            <prosody rate="${speed}" pitch="0%">
+                                ${text}
+                            </prosody>
+                        </mstts:express-as>
+                    </voice>
+                </speak>
+            `;
+    
+            // Obtener token de Azure
+            const tokenResponse = await fetch(
+                `https://${AZURE_CONFIG.region}.api.cognitive.microsoft.com/sts/v1.0/issueToken`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Ocp-Apim-Subscription-Key': AZURE_CONFIG.key
+                    }
+                }
+            );
+    
+            if (!tokenResponse.ok) throw new Error('Failed to get token');
+            const token = await tokenResponse.text();
+    
+            // Generar audio de alta calidad
+            const response = await fetch(
+                `https://${AZURE_CONFIG.region}.tts.speech.microsoft.com/cognitiveservices/v1`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/ssml+xml',
+                        'X-Microsoft-OutputFormat': 'audio-24khz-160kbitrate-mono-mp3',
+                        'User-Agent': 'Language Learning App'
+                    },
+                    body: ssml
+                }
+            );
+    
+            if (!response.ok) throw new Error('Speech generation failed');
+    
+            const audioBlob = await response.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+    
+            audio.onended = () => {
+                URL.revokeObjectURL(audioUrl);
+                showNotification('✨ Audio completed!', 'success');
+            };
+    
+            await audio.play();
+            showNotification('🎵 Playing natural voice...', 'success');
+    
+        } catch (error) {
+            console.error('Error in speech synthesis:', error);
+            useFallbackVoice(text, voiceType);
+        } finally {
+            document.getElementById('loading-indicator').classList.remove('active');
+            document.getElementById('play-btn').disabled = false;
+        }
+    }
+    
+    // Sistema de respaldo mejorado
+    function useFallbackVoice(text, voiceType) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        const voices = window.speechSynthesis.getVoices();
+        
+        // Mapeo inteligente de voces
+        const voiceMap = {
+            'us-female-neural': voices.find(v => v.lang === 'en-US' && v.name.includes('Female')),
+            'us-male-neural': voices.find(v => v.lang === 'en-US' && v.name.includes('Male')),
+            'uk-female-neural': voices.find(v => v.lang === 'en-GB' && v.name.includes('Female')),
+            'uk-male-neural': voices.find(v => v.lang === 'en-GB' && v.name.includes('Male'))
+        };
+    
+        utterance.voice = voiceMap[voiceType] || voices.find(v => v.lang === 'en-US');
+        utterance.rate = document.getElementById('speed-control').value;
+        utterance.pitch = 1;
+    
+        window.speechSynthesis.speak(utterance);
+        showNotification('⚠️ Using enhanced browser speech', 'warning');
+    }
+    
+    // Sistema de notificaciones mejorado
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.innerHTML = `
+            <div class="flex items-center gap-2">
+                <span class="text-xl">${type === 'success' ? '✨' : '⚠️'}</span>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        requestAnimationFrame(() => notification.classList.add('show'));
+    
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+    
+    // Event Listeners
+    document.getElementById('play-btn').addEventListener('click', () => {
+        const selectedPhrase = phrases[document.getElementById('phrase-select').value];
+        if (selectedPhrase) {
+            speak(selectedPhrase.english);
+        }
+    });
+    
+    document.getElementById('check-btn').addEventListener('click', checkAnswer);
+    document.getElementById('phrase-select').addEventListener('change', updateCurrentPhrase);
+    
+    // Función para verificar respuesta
+    function checkAnswer() {
+        const selectedPhrase = phrases[document.getElementById('phrase-select').value];
+        if (!selectedPhrase) return;
+    
+        const userAnswer = document.getElementById('translation-input').value.trim().toLowerCase();
+        const correctAnswer = selectedPhrase.spanish.toLowerCase();
+        
+        // Normalizar respuestas para comparación
+        const normalizedUser = userAnswer.replace(/[¿?.,!¡]/g, '').trim();
+        const normalizedCorrect = correctAnswer.replace(/[¿?.,!¡]/g, '').trim();
+        
+        const isCorrect = normalizedUser === normalizedCorrect;
+    
+        // Actualizar estadísticas y mostrar feedback
+        updateStats(isCorrect);
+        showFeedback(isCorrect, selectedPhrase.spanish);
+    }
+    
+    // Funciones auxiliares
+    function updateCurrentPhrase() {
+        const selectedPhrase = phrases[document.getElementById('phrase-select').value];
+        if (selectedPhrase) {
+            document.getElementById('current-phrase').innerHTML = `
+                <h3 class="text-xl font-bold text-indigo-800">${selectedPhrase.english}</h3>
+            `;
+            document.getElementById('pronunciation-guide').innerHTML = `
+                <h4 class="font-bold text-green-800 mb-2">Pronunciation Guide 🗣️</h4>
+                <code class="text-green-700 block p-2 bg-green-100 rounded">${selectedPhrase.pronunciation}</code>
+            `;
+            document.getElementById('translation-input').value = '';
+            document.getElementById('feedback-area').innerHTML = '';
+        }
+    }
+    
+    let stats = { attempts: 0, correct: 0, streak: 0 };
+    
+    function updateStats(isCorrect) {
+        stats.attempts++;
+        if (isCorrect) {
+            stats.correct++;
+            stats.streak++;
+        } else {
+            stats.streak = 0;
+        }
+    
+        document.getElementById('stats-area').innerHTML = `
+            <div>
+                <p>Attempts: ${stats.attempts}</p>
+                <p>Correct: ${stats.correct}</p>
+            </div>
+            <div>
+                <p>Success Rate: ${Math.round((stats.correct/stats.attempts) * 100)}%</p>
+                <p>Current Streak: ${stats.streak} 🔥</p>
+            </div>
+        `;
+    }
+    
+    function showFeedback(isCorrect, correctAnswer) {
+        document.getElementById('feedback-area').innerHTML = isCorrect ? 
+            `<div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 feedback-correct">
+                <div class="flex items-center">
+                    <span class="text-xl mr-2">🎉</span>
+                    <span>¡Correcto! Streak: ${stats.streak} 🔥</span>
+                </div>
+            </div>` :
+            `<div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 feedback-incorrect">
+                <div class="flex flex-col">
+                    <span>Incorrect. The correct answer is:</span>
+                    <strong class="mt-1">${correctAnswer}</strong>
+                </div>
+            </div>`;
+    }
+    
+    // Inicialización
+    function init() {
+        updateStats(false);
+        showNotification('👋 Welcome to Animal Language Learning!', 'info');
+    }
+    
+    init();
+    </script>
+</body>
+</html>
